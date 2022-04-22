@@ -22,6 +22,8 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(composition REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -38,6 +40,8 @@ add_executable(${NODE_NAME}
   src/subs_scan_pub_cmd.cpp
 )
 ament_target_dependencies(${NODE_NAME} rclcpp)
+ament_target_dependencies(${NODE_NAME} rclcpp_components)
+ament_target_dependencies(${NODE_NAME} composition)
 
 install(
   TARGETS ${NODE_NAME}
