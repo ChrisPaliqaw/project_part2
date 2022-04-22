@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(project_part2 VERSION 0.1.0 LANGUAGES CXX)
-set(NODE_NAME subs_scan_pub_cmd_node)
+set(NODE_NAME subs_scan_pub_cmd)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -36,21 +36,43 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-add_executable(${NODE_NAME}
-  src/subs_scan_pub_cmd.cpp
-)
-ament_target_dependencies(${NODE_NAME} rclcpp)
-ament_target_dependencies(${NODE_NAME} rclcpp_components)
-ament_target_dependencies(${NODE_NAME} composition)
+include_directories(include)
 
-install(
-  TARGETS ${NODE_NAME}
-  DESTINATION lib/${PROJECT_NAME}
- )
+add_library(${NODE_NAME} SHARED src/subs_scan_pub_cmd.cpp)
+target_compile_definitions(${NODE_NAME} PRIVATE "COMPOSITION_BUILDING_DLL")
+ament_target_dependencies(${NODE_NAME}
+  "rclcpp"
+  "rclcpp_components")
+rclcpp_components_register_nodes(${NODE_NAME} "${PROJECT_NAME}::SubsScanPubCmd")
+set(node_plugins "${node_plugins}${PROJECT_NAME}::SubsScanPubCmd;$<TARGET_FILE:${NODE_NAME}>\n")
 
+install(TARGETS
+  ${NODE_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
+
+# Install launch files.
 install(DIRECTORY
   launch
-  DESTINATION share/${PROJECT_NAME}/
+  DESTINATION share/${PROJECT_NAME}
 )
+
+# add_executable(${NODE_NAME}
+#   src/subs_scan_pub_cmd.cpp
+# )
+# ament_target_dependencies(${NODE_NAME} rclcpp)
+# ament_target_dependencies(${NODE_NAME} rclcpp_components)
+# ament_target_dependencies(${NODE_NAME} composition)
+
+# install(
+#   TARGETS ${NODE_NAME}
+#   DESTINATION lib/${PROJECT_NAME}
+#  )
+
+# install(DIRECTORY
+#   launch
+#   DESTINATION share/${PROJECT_NAME}/
+# )
 
 ament_package()
