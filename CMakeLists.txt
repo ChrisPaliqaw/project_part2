@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(project_part2 VERSION 0.1.0 LANGUAGES CXX)
 set(LIBRARY_NAME subs_scan_pub_cmd)
-set(NODE_NAME ${LIBRARY_NAME}_node)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -40,11 +39,6 @@ add_library(${LIBRARY_NAME}
 )
 ament_target_dependencies(${LIBRARY_NAME} rclcpp)
 
-add_executable(${NODE_NAME}
-  src/${NODE_NAME}.cpp
-)
-ament_target_dependencies(${NODE_NAME} rclcpp)
-
 ament_export_targets(${LIBRARY_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(rclcpp)
 
@@ -61,11 +55,6 @@ install(
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include
 )
-
-install(
-  TARGETS ${NODE_NAME}
-  DESTINATION lib/${PROJECT_NAME}
- )
 
 install(DIRECTORY
   launch
