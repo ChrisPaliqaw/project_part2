@@ -7,8 +7,7 @@
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = rclcpp::Node::make_shared("subs_scan_pub_cmd");
-  // SubsScanPubCmd subs_scan_pub_cmd(node, "scan", "cmd_vel");
+  std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("subs_scan_pub_cmd");
   
   rclcpp::spin(node);
   return 0;
