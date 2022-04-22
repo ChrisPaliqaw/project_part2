@@ -2,11 +2,10 @@
 #include <iostream>
 #include <memory>
 
-class SubsScanPubCmd {
+class SubsScanPubCmd : public rclcpp::Node {
 public:
-    SubsScanPubCmd(std::shared_ptr<rclcpp::Node> node, std::string scan_topic, std::string cmd_vel_topic);
+    SubsScanPubCmd(std::string scan_topic="scan", std::string cmd_vel_topic="cmd_vel");
 private:
-    std::shared_ptr<rclcpp::Node> node;
     std::string scan_topic;
     std::string cmd_vel_topic;
 };
