@@ -24,6 +24,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(composition REQUIRED)
+find_package(sensor_msgs)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -42,7 +43,8 @@ add_library(${NODE_NAME} SHARED src/subs_scan_pub_cmd.cpp)
 target_compile_definitions(${NODE_NAME} PRIVATE "COMPOSITION_BUILDING_DLL")
 ament_target_dependencies(${NODE_NAME}
   "rclcpp"
-  "rclcpp_components")
+  "rclcpp_components"
+  "sensor_msgs")
 rclcpp_components_register_nodes(${NODE_NAME} "${PROJECT_NAME}::SubsScanPubCmd")
 set(node_plugins "${node_plugins}${PROJECT_NAME}::SubsScanPubCmd;$<TARGET_FILE:${NODE_NAME}>\n")
 
