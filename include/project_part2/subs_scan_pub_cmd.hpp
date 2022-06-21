@@ -52,6 +52,7 @@ private:
   std::shared_ptr<geometry_msgs::msg::Twist> twist_;
   void stop();
   void turn();
+  void forward();
   void publish_twist();
   static const std::string state_string(State state);
   void log_state_verbose() const;

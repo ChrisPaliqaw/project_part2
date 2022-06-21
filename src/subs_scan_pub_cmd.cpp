@@ -13,7 +13,6 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "geometry_msgs/msg/vector3.hpp"
-// #include "logging_demo/logger_usage_component.hpp"
 
 /*
 ros2 interface show sensor_msgs/msg/LaserScan
@@ -145,7 +144,7 @@ SubsScanPubCmd::SubsScanPubCmd(
     RCLCPP_INFO_STREAM(this->get_logger(), "Create SubsScanPubCmd");
 
     twist_ = std::make_shared<geometry_msgs::msg::Twist>();
-    twist_->linear.x = kLinearVelocity;
+    forward();
 
     auto ret = rcutils_logging_set_logger_level(
         get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
@@ -220,7 +219,7 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
     if (abs(current_rotation_v3.z - goal_turn_v3_.z) <= kTurnFuzz)
     {
         state_ = State::forward_02;
-        stop();
+        forward();
         log_state();
     }
     
@@ -229,6 +228,11 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
 
 void SubsScanPubCmd::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
 {
+    // Only turning behavior is determined by odom
+    if ((state_ == State::set_turn) || (state_ == State::turn)) {
+        return;
+    }
+
     std::lock_guard<std::mutex> lock(state_mutex_);
     RCLCPP_DEBUG_STREAM(get_logger(), message->ranges[kFrontScanRange]);
     switch (state_)
@@ -241,6 +245,14 @@ void SubsScanPubCmd::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr 
             if (message->ranges[kFrontScanRange] < kCloseWallDistance)
             {
                 state_ = State::set_turn;
+                stop();
+                log_state();
+            }
+            break;
+        case State::forward_02:
+            if (message->ranges[kFrontScanRange] < kCloseWallDistance)
+            {
+                state_ = State::stop;
                 stop();
                 log_state();
             }
@@ -263,13 +275,17 @@ void SubsScanPubCmd::stop()
 
 void SubsScanPubCmd::turn()
 {
-    twist_->linear.x = 0;
-    twist_->linear.y = 0;
-    twist_->linear.z = 0;
-    twist_->angular.x = 0;
-    twist_->angular.y = 0;
+    stop();
     twist_->angular.z = this->kRightAngularVelocity;
 }
+
+void SubsScanPubCmd::forward()
+{
+    stop();
+    twist_->linear.x = kLinearVelocity;
+}
+
+
 
 void SubsScanPubCmd::publish_twist()
 {
