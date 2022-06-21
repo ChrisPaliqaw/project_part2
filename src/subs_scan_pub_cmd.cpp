@@ -1,9 +1,19 @@
 #include <functional>
 #include <rclcpp/rclcpp.hpp>
+#include <mutex>
+#include <memory>
+#include "geometry_msgs/msg/detail/twist__struct.hpp"
+#include "geometry_msgs/msg/detail/vector3__struct.hpp"
 #include "project_part2/subs_scan_pub_cmd.hpp"
 #include "../include/project_part2/subs_scan_pub_cmd.hpp"
 #include "rclcpp/logging.hpp"
+#include "rcutils/logging.h"
 #include "sensor_msgs/msg/laser_scan.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "geometry_msgs/msg/twist.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "geometry_msgs/msg/vector3.hpp"
+// #include "logging_demo/logger_usage_component.hpp"
 
 /*
 ros2 interface show sensor_msgs/msg/LaserScan
@@ -40,6 +50,77 @@ float32[] intensities        # intensity data [device-specific units].  If your
 user:~$
 */
 
+/*
+user:~$ ros2 interface show geometry_msgs/msg/Twist
+# This expresses velocity in free space broken into its linear and angular parts.
+
+Vector3  linear
+Vector3  angular
+*/
+
+/*
+user:~$ ros2 interface show geometry_msgs/msg/Vector3
+# This represents a vector in free space.
+
+# This is semantically different than a point.
+# A vector is always anchored at the origin.
+# When a transform is applied to a vector, only the rotational component is applied.
+
+float64 x
+float64 y
+float64 z
+*/
+
+/*
+$ ros2 interface show nav_msgs/msg/Odometry
+# This represents an estimate of a position and velocity in free space.
+# The pose in this message should be specified in the coordinate frame given by header.frame_id
+# The twist in this message should be specified in the coordinate frame given by the child_frame_id
+
+# Includes the frame id of the pose parent.
+std_msgs/Header header
+
+# Frame id the pose points to. The twist is in this coordinate frame.
+string child_frame_id
+
+# Estimated pose that is typically relative to a fixed world frame.
+geometry_msgs/PoseWithCovariance pose
+
+# Estimated linear and angular velocity relative to child_frame_id.
+geometry_msgs/TwistWithCovariance twist
+*/
+
+/*
+$ ros2 interface show geometry_msgs/msg/PoseWithCovariance
+# This represents a pose in free space with uncertainty.
+
+Pose pose
+
+# Row-major representation of the 6x6 covariance matrix
+# The orientation parameters use a fixed-axis representation.
+# In order, the parameters are:
+# (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
+float64[36] covariance
+*/
+
+/*
+user:~/ros2_ws$ ros2 interface show geometry_msgs/msg/Pose
+# A representation of pose in free space, composed of position and orientation.
+
+Point position
+Quaternion orientation
+*/
+
+/*
+user:~/ros2_ws$ ros2 interface show geometry_msgs/msg/Quaternion
+# This represents an orientation in free space in quaternion form.
+
+float64 x 0
+float64 y 0
+float64 z 0
+float64 w 1
+*/
+
 using std::placeholders::_1;
 
 namespace project_part2
@@ -47,40 +128,166 @@ namespace project_part2
 SubsScanPubCmd::SubsScanPubCmd(
         const rclcpp::NodeOptions & options,
         std::string scan_topic,
+        std::string odom_topic,
         std::string cmd_vel_topic):
-    Node("subs_scan_pub_cmd"),
+    Node("subs_scan_pub_cmd", options),
     scan_topic(scan_topic),
     cmd_vel_topic(cmd_vel_topic),
     state_(State::forward_01)
 {
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
         scan_topic, 10, std::bind(&SubsScanPubCmd::scan_callback, this, _1));
+
+    odom_subscription_ = create_subscription<nav_msgs::msg::Odometry>(
+        odom_topic, 10, std::bind(&SubsScanPubCmd::odom_callback, this, _1));
+
+    cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
     RCLCPP_INFO_STREAM(this->get_logger(), "Create SubsScanPubCmd");
+
+    twist_ = std::make_shared<geometry_msgs::msg::Twist>();
+    twist_->linear.x = kLinearVelocity;
+
+    auto ret = rcutils_logging_set_logger_level(
+        get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+    if (ret != RCUTILS_RET_OK) {
+        RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
+        rcutils_reset_error();
+    }
+
     log_state();
+}
+
+// Code adapted from https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+geometry_msgs::msg::Vector3 SubsScanPubCmd::euler_from_quaternion(tf2::Quaternion q)
+{
+    geometry_msgs::msg::Vector3 v3;
+
+    // roll (x-axis rotation)
+    double sinr_cosp = 2 * (q.w() * q.x() + q.y() * q.z());
+    double cosr_cosp = 1 - 2 * (q.x() * q.x() + q.y() * q.y());
+    double roll;
+    roll = std::atan2(sinr_cosp, cosr_cosp);
+
+    // pitch (y-axis rotation)
+    double sinp = 2 * (q.w() * q.y() - q.z() * q.x());
+    double pitch;
+    if (std::abs(sinp) >= 1)
+        pitch = std::copysign(M_PI / 2, sinp); // use 90 degrees if out of range
+    else
+        pitch = std::asin(sinp);
+
+    // yaw (z-axis rotation)
+    double siny_cosp = 2 * (q.w() * q.z() + q.x() * q.y());
+    double cosy_cosp = 1 - 2 * (q.y() * q.y() + q.z() * q.z());
+    double yaw;
+    yaw = std::atan2(siny_cosp, cosy_cosp);
+
+    v3.x = roll;
+    v3.y = pitch;
+    v3.z = yaw;
+
+    return v3;
+}
+
+
+void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)
+{
+    std::lock_guard<std::mutex> lock(state_mutex_);
+
+    // Only turning behavior is determined by odom
+    if ((state_ != State::set_turn) && (state_ != State::turn)) {
+        return;
+    }
+
+    tf2::Quaternion tf2_quaternion;
+    // Convert geometry_msgs::msg::Quaternion to tf2::Quaternion
+    tf2::convert(message->pose.pose.orientation, tf2_quaternion);
+
+    geometry_msgs::msg::Vector3 current_rotation_v3 = euler_from_quaternion(tf2_quaternion);
+
+    if (state_ == State::set_turn) {
+        tf2::Quaternion q_rot;
+        // Rotate the current pose by 90 degrees about Z to get our goal pose
+        q_rot.setRPY(0.0, 0.0, SubsScanPubCmd::kGoalAngularDisplacement);
+        tf2::Quaternion goal_turn = q_rot * tf2_quaternion;
+        goal_turn.normalize();
+        goal_turn_v3_ = SubsScanPubCmd::euler_from_quaternion(goal_turn);
+        state_ = State::turn;
+        turn();
+        log_state();
+    }
+
+    if (abs(current_rotation_v3.z - goal_turn_v3_.z) <= kTurnFuzz)
+    {
+        state_ = State::forward_02;
+        stop();
+        log_state();
+    }
+    
+    publish_twist();
 }
 
 void SubsScanPubCmd::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
 {
-    RCLCPP_DEBUG_STREAM(get_logger(), "Got the message");
+    std::lock_guard<std::mutex> lock(state_mutex_);
     RCLCPP_DEBUG_STREAM(get_logger(), message->ranges[kFrontScanRange]);
-
     switch (state_)
     {
+        // Turning behavior is not determined by the scan
+        case State::set_turn:
+        case State::turn:
+            return;
         case State::forward_01:
             if (message->ranges[kFrontScanRange] < kCloseWallDistance)
             {
                 state_ = State::set_turn;
+                stop();
                 log_state();
             }
             break;
         default:
             break;
-    } 
+    }
+    publish_twist();
+}
+
+void SubsScanPubCmd::stop()
+{
+    twist_->linear.x = 0;
+    twist_->linear.y = 0;
+    twist_->linear.z = 0;
+    twist_->angular.x = 0;
+    twist_->angular.y = 0;
+    twist_->angular.z = 0;
+}
+
+void SubsScanPubCmd::turn()
+{
+    twist_->linear.x = 0;
+    twist_->linear.y = 0;
+    twist_->linear.z = 0;
+    twist_->angular.x = 0;
+    twist_->angular.y = 0;
+    twist_->angular.z = this->kRightAngularVelocity;
+}
+
+void SubsScanPubCmd::publish_twist()
+{
+    cmd_vel_publisher_->publish(*twist_);
+}
+
+void SubsScanPubCmd::log_state_verbose() const
+{
+    RCLCPP_DEBUG(get_logger(), state_string(state_));
+    RCLCPP_DEBUG_STREAM(get_logger(), "linear: (" << twist_->linear.x << ", "  << twist_->linear.y << ", "  << twist_->linear.z << ")");
+    RCLCPP_DEBUG_STREAM(get_logger(), "angular: (" << twist_->angular.x << ", "  << twist_->angular.y << ", "  << twist_->angular.z << ")");
 }
 
 void SubsScanPubCmd::log_state() const
 {
     RCLCPP_INFO(get_logger(), state_string(state_));
+    RCLCPP_INFO_STREAM(get_logger(), "linear: (" << twist_->linear.x << ", "  << twist_->linear.y << ", "  << twist_->linear.z << ")");
+    RCLCPP_INFO_STREAM(get_logger(), "angular: (" << twist_->angular.x << ", "  << twist_->angular.y << ", "  << twist_->angular.z << ")");
 }
 
 const std::string SubsScanPubCmd::state_string(State state)
@@ -88,22 +295,12 @@ const std::string SubsScanPubCmd::state_string(State state)
     std::string return_value;
     switch (state)
     {
-    /*
-    if self == State.FORWARD_01:
-            return "Moving toward the back wall"
-        elif self == State.SET_TURN or self == State.TURN:
-            return "Turning toward the cart"
-        elif self == State.FORWARD_02:
-            return "Moving toward the cart"
-        elif self == State.STOP:
-            return "Arrived at the cart"
-        else:
-            raise ValueError(f"Unknown state {self}")
-    */
         case State::forward_01:
             return_value = "Moving toward the back wall";
             break;
         case State::set_turn:
+            return_value = "Setting the turn speed";
+            break;
         case State::turn:
             return_value = "Turning toward the cart";
             break;
@@ -116,6 +313,8 @@ const std::string SubsScanPubCmd::state_string(State state)
     }
     return return_value;
 }
+
+const double SubsScanPubCmd::kGoalAngularDisplacement = -(M_PI / 2.0);
 
 } // namespace project_part2
 
