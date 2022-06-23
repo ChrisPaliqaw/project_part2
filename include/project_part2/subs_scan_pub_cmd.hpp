@@ -32,7 +32,17 @@ public:
   static const double kGoalAngularDisplacement;
   static constexpr double kTurnFuzz = 0.1; // Precision of turn +-
 
-  enum class State { forward_01, set_turn, turn, forward_02, stop };
+  enum class State
+  {
+    forward_01,
+    stop_forward_01,
+    set_turn,
+    turn,
+    stop_turn,
+    forward_02,
+    stop_forward_02,
+    stop
+  };
 
 private:
   const std::string scan_topic;
@@ -54,7 +64,10 @@ private:
   void turn();
   void forward();
   void publish_twist();
-  static const std::string state_string(State state);
+  static std::string state_string(State state);
+  static double magnitude(geometry_msgs::msg::Vector3 v3);
+  static bool is_stopped(geometry_msgs::msg::Vector3 v3);
+  bool is_buffer_stop_state() const;
   void log_state_verbose() const;
   void log_state() const;
 };
