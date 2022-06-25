@@ -13,6 +13,7 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "geometry_msgs/msg/vector3.hpp"
+#include "std_msgs/msg/empty.hpp"
 
 /*
 ros2 interface show sensor_msgs/msg/LaserScan
@@ -128,10 +129,14 @@ SubsScanPubCmd::SubsScanPubCmd(
         const rclcpp::NodeOptions & options,
         std::string scan_topic,
         std::string odom_topic,
-        std::string cmd_vel_topic):
+        std::string cmd_vel_topic,
+        std::string elevator_up_topic,
+        std::string elevator_down_topic):
     Node("subs_scan_pub_cmd", options),
     scan_topic(scan_topic),
     cmd_vel_topic(cmd_vel_topic),
+    elevator_up_topic(elevator_up_topic),
+    elevator_down_topic(elevator_down_topic),
     state_(State::forward_01)
 {
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
@@ -141,9 +146,15 @@ SubsScanPubCmd::SubsScanPubCmd(
         odom_topic, 10, std::bind(&SubsScanPubCmd::odom_callback, this, _1));
 
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
+
+    elevator_up_publisher_ = create_publisher<std_msgs::msg::Empty>(elevator_up_topic, 10);
+    elevator_down_publisher_ = create_publisher<std_msgs::msg::Empty>(elevator_down_topic, 10);
+
+
     RCLCPP_INFO_STREAM(this->get_logger(), "Create SubsScanPubCmd");
 
     twist_ = std::make_shared<geometry_msgs::msg::Twist>();
+    empty_ = std::make_shared<std_msgs::msg::Empty>();
     forward();
 
     auto ret = rcutils_logging_set_logger_level(
@@ -257,6 +268,9 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
                 log_state();
                 break;
             case State::stop_forward_02:
+                state_ = State::elevator_up;
+                elevator_up();
+                log_state();
                 state_ = State::stop;
                 stop();
                 log_state();
@@ -327,7 +341,7 @@ void SubsScanPubCmd::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr 
             }
             break;
         case State::forward_02:
-            if (message->ranges[kFrontScanRange] < kCloseWallDistance)
+            if (message->ranges[kFrontScanRange] < kCloseCartDistance)
             {
                 state_ = State::stop_forward_02;
                 stop();
@@ -362,11 +376,17 @@ void SubsScanPubCmd::forward()
     twist_->linear.x = kLinearVelocity;
 }
 
-
+void SubsScanPubCmd::elevator_up()
+{
+    elevator_up_publisher_->publish(*empty_);
+}
 
 void SubsScanPubCmd::publish_twist()
 {
-    cmd_vel_publisher_->publish(*twist_);
+    if (state_ != State::stop)
+    {
+        cmd_vel_publisher_->publish(*twist_);
+    }
 }
 
 void SubsScanPubCmd::log_state_verbose() const
@@ -409,11 +429,15 @@ std::string SubsScanPubCmd::state_string(State state)
         case State::stop_forward_02:
             return_value = "Stopping inside the cart";
             break;
+        case State::elevator_up:
+            return_value = "Raising the elevator";
+            break;
         case State::stop:
             return_value = "Arrived at the cart";
             break;
         default:
             return_value = "Error: unknown robot state";
+            break;
     }
     return return_value;
 }

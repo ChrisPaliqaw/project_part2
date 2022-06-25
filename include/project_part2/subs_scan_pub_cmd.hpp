@@ -6,6 +6,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "project_part2/visibility_control.h"
 #include "sensor_msgs/msg/laser_scan.hpp"
+#include "std_msgs/msg/detail/empty__struct.hpp"
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -21,11 +22,14 @@ public:
   explicit SubsScanPubCmd(const rclcpp::NodeOptions &options,
                           std::string scan_topic = "scan",
                           std::string odom_topic = "odom",
-                          std::string cmd_vel_topic = "robot/cmd_vel");
+                          std::string cmd_vel_topic = "robot/cmd_vel",
+                          std::string elevator_down_topic = "/elevator_down",
+                          std::string elevator_up_topic = "/elevator_up");
   static geometry_msgs::msg::Vector3 euler_from_quaternion(tf2::Quaternion q);
 
   static constexpr int kFrontScanRange = 540;
-  static constexpr double kCloseWallDistance = 0.41;
+  static constexpr double kCloseWallDistance = 0.33;
+  static constexpr double kCloseCartDistance = 0.2;
   static constexpr double kLinearVelocity = 0.08;
   static constexpr double kLeftAngularVelocity = 0.2;
   static constexpr double kRightAngularVelocity = -kLeftAngularVelocity;
@@ -40,6 +44,7 @@ public:
     stop_turn,
     forward_02,
     stop_forward_02,
+    elevator_up,
     stop
   };
 
@@ -47,6 +52,8 @@ private:
   const std::string scan_topic;
   const std::string odom_topic;
   const std::string cmd_vel_topic;
+  const std::string elevator_up_topic;
+  const std::string elevator_down_topic;
   State state_;
   geometry_msgs::msg::Vector3
       goal_turn_v3_; // Goal: odom pose z rotation when turning toward cart
@@ -54,14 +61,18 @@ private:
       laser_subscription_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr elevator_up_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr elevator_down_publisher_;
   void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message);
   void odom_callback(const nav_msgs::msg::Odometry::SharedPtr message);
 
   std::mutex state_mutex_;
   std::shared_ptr<geometry_msgs::msg::Twist> twist_;
+  std::shared_ptr<std_msgs::msg::Empty> empty_;
   void stop();
   void turn();
   void forward();
+  void elevator_up();
   void publish_twist();
   static std::string state_string(State state);
   static double magnitude(geometry_msgs::msg::Vector3 v3);
