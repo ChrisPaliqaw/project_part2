@@ -3,9 +3,9 @@
 
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "project_part2/visibility_control.h"
 #include "sensor_msgs/msg/laser_scan.hpp"
-#include "nav_msgs/msg/odometry.hpp"
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -18,22 +18,21 @@ namespace project_part2 {
 class SubsScanPubCmd : public rclcpp::Node {
 public:
   COMPOSITION_PUBLIC
-  explicit SubsScanPubCmd(const rclcpp::NodeOptions & options,
+  explicit SubsScanPubCmd(const rclcpp::NodeOptions &options,
                           std::string scan_topic = "scan",
                           std::string odom_topic = "odom",
                           std::string cmd_vel_topic = "robot/cmd_vel");
   static geometry_msgs::msg::Vector3 euler_from_quaternion(tf2::Quaternion q);
 
   static constexpr int kFrontScanRange = 540;
-  static constexpr double kCloseWallDistance = 0.35;
-  static constexpr double kLinearVelocity = 0.6;
+  static constexpr double kCloseWallDistance = 0.41;
+  static constexpr double kLinearVelocity = 0.08;
   static constexpr double kLeftAngularVelocity = 0.2;
   static constexpr double kRightAngularVelocity = -kLeftAngularVelocity;
   static const double kGoalAngularDisplacement;
   static constexpr double kTurnFuzz = 0.1; // Precision of turn +-
 
-  enum class State
-  {
+  enum class State {
     forward_01,
     stop_forward_01,
     set_turn,
@@ -49,11 +48,11 @@ private:
   const std::string odom_topic;
   const std::string cmd_vel_topic;
   State state_;
-  geometry_msgs::msg::Vector3 goal_turn_v3_; // Goal: odom pose z rotation when turning toward cart
+  geometry_msgs::msg::Vector3
+      goal_turn_v3_; // Goal: odom pose z rotation when turning toward cart
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       laser_subscription_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr
-      odom_subscription_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message);
   void odom_callback(const nav_msgs::msg::Odometry::SharedPtr message);
