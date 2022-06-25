@@ -378,6 +378,7 @@ void SubsScanPubCmd::forward()
 
 void SubsScanPubCmd::elevator_up()
 {
+    RCLCPP_DEBUG(get_logger(), "PUBLISHING ELEVATOR UP");
     elevator_up_publisher_->publish(*empty_);
 }
 

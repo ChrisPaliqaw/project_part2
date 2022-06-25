@@ -23,8 +23,8 @@ public:
                           std::string scan_topic = "scan",
                           std::string odom_topic = "odom",
                           std::string cmd_vel_topic = "robot/cmd_vel",
-                          std::string elevator_down_topic = "/elevator_down",
-                          std::string elevator_up_topic = "/elevator_up");
+                          std::string elevator_down_topic = "elevator_down",
+                          std::string elevator_up_topic = "elevator_up");
   static geometry_msgs::msg::Vector3 euler_from_quaternion(tf2::Quaternion q);
 
   static constexpr int kFrontScanRange = 540;
