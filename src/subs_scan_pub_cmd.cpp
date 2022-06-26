@@ -143,9 +143,10 @@ SubsScanPubCmd::SubsScanPubCmd(
     elevator_down_topic(elevator_down_topic),
     state_(State::forward_01)
 {
-    this->declare_parameter<std::string>(kIsGazeboParameter, "set inside the constructor");
+    this->declare_parameter<bool>(kIsGazeboParameter, false);
     this->get_parameter(kIsGazeboParameter, is_gazebo_);
-    RCLCPP_INFO_STREAM(get_logger(), "is_gazebo = " << is_gazebo_);
+    RCLCPP_INFO_STREAM(get_logger(), "is_gazebo = " << (is_gazebo_ ? "true" : "false"));
+    linear_velocity_ = (is_gazebo_ ? kGazeboLinearVelocity : kLinearVelocity);
 
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
         scan_topic, 10, std::bind(&SubsScanPubCmd::scan_callback, this, _1));
@@ -381,7 +382,7 @@ void SubsScanPubCmd::turn()
 void SubsScanPubCmd::forward()
 {
     stop();
-    twist_->linear.x = kLinearVelocity;
+    twist_->linear.x = linear_velocity_;
 }
 
 void SubsScanPubCmd::elevator_up()

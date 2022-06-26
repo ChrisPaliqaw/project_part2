@@ -31,6 +31,7 @@ public:
   static constexpr double kCloseWallDistance = 0.33;
   static constexpr double kCloseCartDistance = 0.2;
   static constexpr double kLinearVelocity = 0.08;
+  static constexpr double kGazeboLinearVelocity = 0.08;
   static constexpr double kLeftAngularVelocity = 0.2;
   static constexpr double kRightAngularVelocity = -kLeftAngularVelocity;
   static const double kGoalAngularDisplacement;
@@ -55,6 +56,10 @@ private:
   const std::string cmd_vel_topic;
   const std::string elevator_up_topic;
   const std::string elevator_down_topic;
+  // Set inside the constructor and never changed, but can't
+  // be declared constant because we must get the parameter is_gazebo in order
+  // to set it correctly
+  double linear_velocity_;
   State state_;
   geometry_msgs::msg::Vector3
       goal_turn_v3_; // Goal: odom pose z rotation when turning toward cart
@@ -67,7 +72,7 @@ private:
   void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message);
   void odom_callback(const nav_msgs::msg::Odometry::SharedPtr message);
 
-  std::string is_gazebo_;
+  bool is_gazebo_;
   std::mutex state_mutex_;
   std::shared_ptr<geometry_msgs::msg::Twist> twist_;
   std::shared_ptr<std_msgs::msg::Empty> empty_;
