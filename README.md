@@ -9,4 +9,4 @@ Concepts:
 - Components
 - Multithreaded programming using std::lock_guard, but I plan to migrate it to a multi-threaded executor with a revenant callback group.
 - Subscription and publication of topics
-- Uses a ROS2 parameter to adapt to either gazebo or a real RB1 in the Construct's [RoBox](https://www.theconstructsim.com/robox/) lab.
+- A ROS2 parameter adapts the algorithm to either Gazebo or a real RB1 in the Construct's [RoBox](https://www.theconstructsim.com/robox/) lab.
