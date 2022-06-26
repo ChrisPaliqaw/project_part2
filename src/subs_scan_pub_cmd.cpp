@@ -278,11 +278,15 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
                 break;
             case State::stop_forward_02:
                 state_ = State::elevator_up;
+
                 elevator_up();
                 log_state();
+                return;
+                /*
                 state_ = State::stop;
                 stop();
                 log_state();
+                */
                 break;
             default:
                 RCLCPP_ERROR_STREAM(get_logger(), "Unexpected state: " << state_string(state_));
@@ -387,7 +391,7 @@ void SubsScanPubCmd::forward()
 
 void SubsScanPubCmd::elevator_up()
 {
-    RCLCPP_DEBUG(get_logger(), "PUBLISHING ELEVATOR UP");
+    RCLCPP_INFO(get_logger(), "Publishing elevator_up");
     elevator_up_publisher_->publish(*empty_);
 }
 
