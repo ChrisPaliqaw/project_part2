@@ -35,6 +35,7 @@ public:
   static constexpr double kRightAngularVelocity = -kLeftAngularVelocity;
   static const double kGoalAngularDisplacement;
   static constexpr double kTurnFuzz = 0.1; // Precision of turn +-
+  static const std::string kIsGazeboParameter;
 
   enum class State {
     forward_01,
@@ -66,6 +67,7 @@ private:
   void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message);
   void odom_callback(const nav_msgs::msg::Odometry::SharedPtr message);
 
+  std::string is_gazebo_;
   std::mutex state_mutex_;
   std::shared_ptr<geometry_msgs::msg::Twist> twist_;
   std::shared_ptr<std_msgs::msg::Empty> empty_;

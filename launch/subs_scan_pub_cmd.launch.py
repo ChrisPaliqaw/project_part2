@@ -14,7 +14,11 @@ def generate_launch_description():
                 ComposableNode(
                     package='project_part2',
                     plugin='project_part2::SubsScanPubCmd',
-                    name='subs_scan_pub_cmd_component'),
+                    name='subs_scan_pub_cmd_component',
+                    parameters=[
+                        {"is_gazebo": "set inside the launch file"}
+                    ]
+                ),
             ],
             output='screen',
     )

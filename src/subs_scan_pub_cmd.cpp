@@ -1,6 +1,7 @@
 #include <functional>
 #include <rclcpp/rclcpp.hpp>
 #include <mutex>
+#include <string>
 #include <memory>
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/detail/vector3__struct.hpp"
@@ -14,6 +15,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "geometry_msgs/msg/vector3.hpp"
 #include "std_msgs/msg/empty.hpp"
+
 
 /*
 ros2 interface show sensor_msgs/msg/LaserScan
@@ -132,6 +134,8 @@ SubsScanPubCmd::SubsScanPubCmd(
         std::string cmd_vel_topic,
         std::string elevator_up_topic,
         std::string elevator_down_topic):
+
+
     Node("subs_scan_pub_cmd", options),
     scan_topic(scan_topic),
     cmd_vel_topic(cmd_vel_topic),
@@ -139,6 +143,10 @@ SubsScanPubCmd::SubsScanPubCmd(
     elevator_down_topic(elevator_down_topic),
     state_(State::forward_01)
 {
+    this->declare_parameter<std::string>(kIsGazeboParameter, "set inside the constructor");
+    this->get_parameter(kIsGazeboParameter, is_gazebo_);
+    RCLCPP_INFO_STREAM(get_logger(), "is_gazebo = " << is_gazebo_);
+
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
         scan_topic, 10, std::bind(&SubsScanPubCmd::scan_callback, this, _1));
 
@@ -444,6 +452,7 @@ std::string SubsScanPubCmd::state_string(State state)
 }
 
 const double SubsScanPubCmd::kGoalAngularDisplacement = -(M_PI / 2.0);
+const std::string SubsScanPubCmd::kIsGazeboParameter = "is_gazebo";
 
 } // namespace project_part2
 
