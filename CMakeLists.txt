@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(project_part2 VERSION 0.1.0 LANGUAGES CXX)
 set(NODE_NAME subs_scan_pub_cmd)
+# set(PRE_APPROACH_NODE_NAME pre_approach)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -24,9 +25,9 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(composition REQUIRED)
-find_package(sensor_msgs)
-find_package(geometry_msgs)
-find_package(nav_msgs)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -42,13 +43,26 @@ endif()
 include_directories(include)
 
 add_library(${NODE_NAME} SHARED src/subs_scan_pub_cmd.cpp)
+# add_library(${PRE_APPROACH_NODE_NAME} SHARED src/pre_approach.cpp)
+# add_executable(${PRE_APPROACH_NODE_NAME}
+#   src/pre_approach_main.cpp
+# )
+
 target_compile_definitions(${NODE_NAME} PRIVATE "COMPOSITION_BUILDING_DLL")
+
 ament_target_dependencies(${NODE_NAME}
   "rclcpp"
   "rclcpp_components"
   "sensor_msgs"
   "geometry_msgs"
   "nav_msgs")
+# ament_target_dependencies(${PRE_APPROACH_NODE_NAME}
+#   "rclcpp"
+#   "rclcpp_components"
+#   "sensor_msgs"
+#   "geometry_msgs"
+#   "nav_msgs")
+
 rclcpp_components_register_nodes(${NODE_NAME} "${PROJECT_NAME}::SubsScanPubCmd")
 set(node_plugins "${node_plugins}${PROJECT_NAME}::SubsScanPubCmd;$<TARGET_FILE:${NODE_NAME}>\n")
 
@@ -57,6 +71,11 @@ install(TARGETS
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
+# install(TARGETS
+#   ${PRE_APPROACH_NODE_NAME}
+#   ARCHIVE DESTINATION lib
+#   LIBRARY DESTINATION lib
+#   RUNTIME DESTINATION bin)
 
 # Install launch files.
 install(DIRECTORY
@@ -64,21 +83,9 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
-# add_executable(${NODE_NAME}
-#   src/subs_scan_pub_cmd.cpp
-# )
-# ament_target_dependencies(${NODE_NAME} rclcpp)
-# ament_target_dependencies(${NODE_NAME} rclcpp_components)
-# ament_target_dependencies(${NODE_NAME} composition)
-
 # install(
-#   TARGETS ${NODE_NAME}
+#   TARGETS ${PRE_APPROACH_NODE_NAME}
 #   DESTINATION lib/${PROJECT_NAME}
-#  )
-
-# install(DIRECTORY
-#   launch
-#   DESTINATION share/${PROJECT_NAME}/
 # )
 
 ament_package()
