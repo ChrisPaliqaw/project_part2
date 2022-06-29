@@ -231,21 +231,8 @@ bool SubsScanPubCmd::is_buffer_stop_state () const
     }
 }
 
-bool SubsScanPubCmd::is_stopped(geometry_msgs::msg::Vector3 v3)
+bool SubsScanPubCmd::is_turn_state () const
 {
-    return abs(magnitude(v3)) <= kTurnFuzz;
-}
-
-void SubsScanPubCmd::timer_callback()
-{
-    RCLCPP_DEBUG(this->get_logger(), "Behavior timer callback");
-}
-
-void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)
-{
-    std::lock_guard<std::mutex> lock(state_mutex_);
-
-    // Only turning behavior is determined by odom
     switch (state_)
     {
     case State::stop_forward_01:
@@ -257,8 +244,40 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
     case State::stop_turn:
         [[fallthrough]];
     case State::stop_forward_02:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool SubsScanPubCmd::is_stopped(geometry_msgs::msg::Vector3 v3)
+{
+    return abs(magnitude(v3)) <= kTurnFuzz;
+}
+
+void SubsScanPubCmd::timer_callback()
+{
+    RCLCPP_DEBUG(this->get_logger(), "Behavior timer callback");
+
+    switch (state_) {
+    case State::elevator_up:
+        elevator_up();
+        state_ = State::stop;
+        stop();
+        log_state();
         break;
     default:
+        RCLCPP_DEBUG_STREAM(get_logger(), "Currently unhandled state: " << state_string(state_));
+    }
+}
+
+void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)
+{
+    std::lock_guard<std::mutex> lock(state_mutex_);
+
+    // Only turning behavior is determined by odom
+    if (!is_turn_state())
+    {
         return;
     }
 
@@ -286,15 +305,7 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
                 break;
             case State::stop_forward_02:
                 state_ = State::elevator_up;
-
-                elevator_up();
                 log_state();
-                return;
-                /*
-                state_ = State::stop;
-                stop();
-                log_state();
-                */
                 break;
             default:
                 RCLCPP_ERROR_STREAM(get_logger(), "Unexpected state: " << state_string(state_));

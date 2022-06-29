@@ -29,7 +29,7 @@ public:
 
   static constexpr int kFrontScanRange = 540;
   static constexpr double kCloseWallDistance = 0.33;
-  static constexpr double kCloseCartDistance = 0.2;
+  static constexpr double kCloseCartDistance = 0.33;
   static constexpr double kLinearVelocity = 0.08;
   static constexpr double kGazeboLinearVelocity = 0.16;
   static constexpr double kLeftAngularVelocity = 0.2;
@@ -88,6 +88,7 @@ private:
   static double magnitude(geometry_msgs::msg::Vector3 v3);
   static bool is_stopped(geometry_msgs::msg::Vector3 v3);
   bool is_buffer_stop_state() const;
+  bool is_turn_state() const;
   void log_state_verbose() const;
   void log_state() const;
 };
