@@ -250,6 +250,25 @@ bool SubsScanPubCmd::is_odom_state () const
     }
 }
 
+bool SubsScanPubCmd::is_scan_state () const
+{
+    switch (state_)
+    {
+    case State::stop_forward_01:
+        [[fallthrough]];
+    case State::set_turn:
+        [[fallthrough]];
+    case State::turn:
+        [[fallthrough]];
+    case State::stop_turn:
+        [[fallthrough]];
+    case State::stop_forward_02:
+        return false;
+    default:
+        return true;
+    }
+}
+
 bool SubsScanPubCmd::is_stopped(geometry_msgs::msg::Vector3 v3)
 {
     return abs(magnitude(v3)) <= kTurnFuzz;
@@ -257,6 +276,7 @@ bool SubsScanPubCmd::is_stopped(geometry_msgs::msg::Vector3 v3)
 
 void SubsScanPubCmd::timer_callback()
 {
+    std::lock_guard<std::mutex> lock(state_mutex_);
     RCLCPP_DEBUG(this->get_logger(), "Behavior timer callback");
     
     switch (state_)
@@ -342,24 +362,13 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
 
 void SubsScanPubCmd::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
 {
-    // turning behavior is determined by odom
-    switch (state_)
-    {
-    case State::stop_forward_01:
-        [[fallthrough]];
-    case State::set_turn:
-        [[fallthrough]];
-    case State::turn:
-        [[fallthrough]];
-    case State::stop_turn:
-        [[fallthrough]];
-    case State::stop_forward_02:
-        return;
-    default:
-        break;
-    }
-
     std::lock_guard<std::mutex> lock(state_mutex_);
+
+    if (!is_scan_state())
+    {
+        return;
+    }
+    
     RCLCPP_DEBUG_STREAM(get_logger(), message->ranges[kFrontScanRange]);
     switch (state_)
     {

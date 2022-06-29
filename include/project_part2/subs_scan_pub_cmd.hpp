@@ -91,6 +91,8 @@ private:
   bool is_buffer_stop_state() const;
   // States whose status is monitored using odom
   bool is_odom_state() const;
+  // States whose status must be monitored by laser scan
+  bool is_scan_state() const;
   // Log state using DEBUG level
   void log_state_verbose() const;
   // Log state using INFO level
