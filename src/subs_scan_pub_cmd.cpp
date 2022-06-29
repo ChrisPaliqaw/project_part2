@@ -231,7 +231,7 @@ bool SubsScanPubCmd::is_buffer_stop_state () const
     }
 }
 
-bool SubsScanPubCmd::is_turn_state () const
+bool SubsScanPubCmd::is_odom_state () const
 {
     switch (state_)
     {
@@ -258,13 +258,25 @@ bool SubsScanPubCmd::is_stopped(geometry_msgs::msg::Vector3 v3)
 void SubsScanPubCmd::timer_callback()
 {
     RCLCPP_DEBUG(this->get_logger(), "Behavior timer callback");
-
-    switch (state_) {
+    
+    switch (state_)
+    {
+    case State::turn:
+        turn();
+        break;
+    case State::stop_turn:
+        stop();
+        break;
+    case State::forward_02:
+        forward();
+        break;
     case State::elevator_up:
         elevator_up();
         state_ = State::stop;
-        stop();
         log_state();
+        break;
+    case State::stop:
+        stop();
         break;
     default:
         RCLCPP_DEBUG_STREAM(get_logger(), "Currently unhandled state: " << state_string(state_));
@@ -275,19 +287,18 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
 {
     std::lock_guard<std::mutex> lock(state_mutex_);
 
-    // Only turning behavior is determined by odom
-    if (!is_turn_state())
-    {
-        return;
-    }
-
     tf2::Quaternion tf2_quaternion;
     // Convert geometry_msgs::msg::Quaternion to tf2::Quaternion
     tf2::convert(message->pose.pose.orientation, tf2_quaternion);
 
     geometry_msgs::msg::Vector3 current_rotation_v3 = euler_from_quaternion(tf2_quaternion);
 
-    if (is_buffer_stop_state())
+    // Only turning behavior is determined by odom
+    if (!is_odom_state())
+    {
+        return;
+    }
+    else if (is_buffer_stop_state())
     {
         bool stopped = is_stopped(message->twist.twist.angular) && is_stopped(message->twist.twist.linear);
         if (stopped)
@@ -295,12 +306,10 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
             switch (state_) {
             case State::stop_forward_01:
                 state_ = State::set_turn;
-                RCLCPP_INFO_STREAM(get_logger(), "SET TURN IN THE PROPER PLACE");
                 log_state();
                 break;
             case State::stop_turn:
                 state_ = State::forward_02;
-                forward();
                 log_state();
                 break;
             case State::stop_forward_02:
@@ -312,8 +321,7 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
             }
         }
     }
-
-    if (state_ == State::set_turn) {
+    else if (state_ == State::set_turn) {
         RCLCPP_INFO_STREAM(get_logger(), "SETTING TURN");
         tf2::Quaternion q_rot;
         // Rotate the current pose by 90 degrees about Z to get our goal pose
@@ -322,14 +330,10 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
         goal_turn.normalize();
         goal_turn_v3_ = SubsScanPubCmd::euler_from_quaternion(goal_turn);
         state_ = State::turn;
-        turn();
-        log_state();
     }
-
     else if ((state_ == State::turn) && (abs(current_rotation_v3.z - goal_turn_v3_.z) <= kTurnFuzz))
     {
         state_ = State::stop_turn;
-        stop();
         log_state();
     }
     
@@ -438,41 +442,41 @@ void SubsScanPubCmd::log_state() const
 
 std::string SubsScanPubCmd::state_string(State state)
 {
-    std::string return_value;
+    std::string string_value;
     switch (state)
     {
         case State::forward_01:
-            return_value = "Moving toward the back wall";
+            string_value = "Moving toward the back wall";
             break;
         case State::stop_forward_01:
-            return_value = "Stopping after moving toward the back wall";
+            string_value = "Stopping after moving toward the back wall";
             break;
         case State::set_turn:
-            return_value = "Setting the turn speed";
+            string_value = "Setting the turn speed";
             break;
         case State::turn:
-            return_value = "Turning toward the cart";
+            string_value = "Turning toward the cart";
             break;
         case State::stop_turn:
-            return_value = "Stopping after turning toward the cart";
+            string_value = "Stopping after turning toward the cart";
             break;
         case State::forward_02:
-            return_value = "Moving toward the cart";
+            string_value = "Moving toward the cart";
             break;
         case State::stop_forward_02:
-            return_value = "Stopping inside the cart";
+            string_value = "Stopping inside the cart";
             break;
         case State::elevator_up:
-            return_value = "Raising the elevator";
+            string_value = "Raising the elevator";
             break;
         case State::stop:
-            return_value = "Arrived at the cart";
+            string_value = "Inside the cart with the elevator raised";
             break;
         default:
-            return_value = "Error: unknown robot state";
+            string_value = "Error: unknown robot state";
             break;
     }
-    return return_value;
+    return string_value;
 }
 
 const double SubsScanPubCmd::kGoalAngularDisplacement = -(M_PI / 2.0);

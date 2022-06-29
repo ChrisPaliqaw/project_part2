@@ -87,9 +87,13 @@ private:
   static std::string state_string(State state);
   static double magnitude(geometry_msgs::msg::Vector3 v3);
   static bool is_stopped(geometry_msgs::msg::Vector3 v3);
+  // States in which the node is waiting for the robot to slow and stop
   bool is_buffer_stop_state() const;
-  bool is_turn_state() const;
+  // States whose status is monitored using odom
+  bool is_odom_state() const;
+  // Log state using DEBUG level
   void log_state_verbose() const;
+  // Log state using INFO level
   void log_state() const;
 };
 } // namespace project_part2
