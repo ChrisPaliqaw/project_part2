@@ -3,12 +3,14 @@
 #include <mutex>
 #include <string>
 #include <memory>
+#include <chrono>
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/detail/vector3__struct.hpp"
 #include "project_part2/subs_scan_pub_cmd.hpp"
 #include "../include/project_part2/subs_scan_pub_cmd.hpp"
 #include "rclcpp/logging.hpp"
 #include "rcutils/logging.h"
+#include "rosidl_runtime_cpp/traits.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/twist.hpp"
@@ -16,6 +18,7 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include "std_msgs/msg/empty.hpp"
 
+using namespace std::chrono_literals;
 
 /*
 ros2 interface show sensor_msgs/msg/LaserScan
@@ -148,14 +151,14 @@ SubsScanPubCmd::SubsScanPubCmd(
     RCLCPP_INFO_STREAM(get_logger(), "is_gazebo = " << (is_gazebo_ ? "true" : "false"));
     linear_velocity_ = (is_gazebo_ ? kGazeboLinearVelocity : kLinearVelocity);
 
+    timer_ptr_ = this->create_wall_timer(0.25s, std::bind(&SubsScanPubCmd::timer_callback, this));
+
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
         scan_topic, 10, std::bind(&SubsScanPubCmd::scan_callback, this, _1));
-
     odom_subscription_ = create_subscription<nav_msgs::msg::Odometry>(
         odom_topic, 10, std::bind(&SubsScanPubCmd::odom_callback, this, _1));
 
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
-
     elevator_up_publisher_ = create_publisher<std_msgs::msg::Empty>(elevator_up_topic, 10);
     elevator_down_publisher_ = create_publisher<std_msgs::msg::Empty>(elevator_down_topic, 10);
 
@@ -231,6 +234,11 @@ bool SubsScanPubCmd::is_buffer_stop_state () const
 bool SubsScanPubCmd::is_stopped(geometry_msgs::msg::Vector3 v3)
 {
     return abs(magnitude(v3)) <= kTurnFuzz;
+}
+
+void SubsScanPubCmd::timer_callback()
+{
+    RCLCPP_DEBUG(this->get_logger(), "Behavior timer callback");
 }
 
 void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)

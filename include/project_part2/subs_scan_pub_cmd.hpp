@@ -31,7 +31,7 @@ public:
   static constexpr double kCloseWallDistance = 0.33;
   static constexpr double kCloseCartDistance = 0.2;
   static constexpr double kLinearVelocity = 0.08;
-  static constexpr double kGazeboLinearVelocity = 0.08;
+  static constexpr double kGazeboLinearVelocity = 0.16;
   static constexpr double kLeftAngularVelocity = 0.2;
   static constexpr double kRightAngularVelocity = -kLeftAngularVelocity;
   static const double kGoalAngularDisplacement;
@@ -65,6 +65,9 @@ private:
       goal_turn_v3_; // Goal: odom pose z rotation when turning toward cart
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       laser_subscription_;
+
+  rclcpp::TimerBase::SharedPtr timer_ptr_;
+  void timer_callback();
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr elevator_up_publisher_;
