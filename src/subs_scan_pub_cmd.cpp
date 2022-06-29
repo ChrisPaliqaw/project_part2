@@ -281,6 +281,15 @@ void SubsScanPubCmd::timer_callback()
     
     switch (state_)
     {
+    case State::forward_01:
+        forward();
+        break;
+    case State::stop_forward_01:
+        stop();
+        break;
+    case State::set_turn:
+        // Handled in odom
+        break;
     case State::turn:
         turn();
         break;
@@ -290,6 +299,9 @@ void SubsScanPubCmd::timer_callback()
     case State::forward_02:
         forward();
         break;
+    case State::stop_forward_02:
+        stop();
+        break;
     case State::elevator_up:
         elevator_up();
         state_ = State::stop;
@@ -298,9 +310,8 @@ void SubsScanPubCmd::timer_callback()
     case State::stop:
         stop();
         break;
-    default:
-        RCLCPP_DEBUG_STREAM(get_logger(), "Currently unhandled state: " << state_string(state_));
     }
+    publish_twist();
 }
 
 void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)
@@ -356,8 +367,6 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
         state_ = State::stop_turn;
         log_state();
     }
-    
-    publish_twist();
 }
 
 void SubsScanPubCmd::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
@@ -372,16 +381,10 @@ void SubsScanPubCmd::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr 
     RCLCPP_DEBUG_STREAM(get_logger(), message->ranges[kFrontScanRange]);
     switch (state_)
     {
-        // Turning behavior is not determined by the scan
-        case State::set_turn:
-            [[fallthrough]];
-        case State::turn:
-            return;
         case State::forward_01:
             if (message->ranges[kFrontScanRange] < kCloseWallDistance)
             {
                 state_ = State::stop_forward_01;
-                stop();
                 log_state();
             }
             break;
@@ -389,14 +392,12 @@ void SubsScanPubCmd::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr 
             if (message->ranges[kFrontScanRange] < kCloseCartDistance)
             {
                 state_ = State::stop_forward_02;
-                stop();
                 log_state();
             }
             break;
         default:
             break;
     }
-    publish_twist();
 }
 
 void SubsScanPubCmd::stop()
