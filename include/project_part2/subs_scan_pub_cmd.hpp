@@ -1,5 +1,5 @@
-#ifndef COMPOSITION__PROJECT_PART2_COMPONENT_HPP_
-#define COMPOSITION__PROJECT_PART2_COMPONENT_HPP_
+#ifndef SUBS_SCAN_PUB_CMD_HPP_
+#define SUBS_SCAN_PUB_CMD_HPP_
 
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/twist.hpp"
@@ -10,7 +10,6 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
-#include <mutex>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -18,8 +17,7 @@ namespace project_part2 {
 
 class SubsScanPubCmd : public rclcpp::Node {
 public:
-  COMPOSITION_PUBLIC
-  explicit SubsScanPubCmd(const rclcpp::NodeOptions &options,
+  explicit SubsScanPubCmd(
                           std::string scan_topic = "scan",
                           std::string odom_topic = "odom",
                           std::string cmd_vel_topic = "robot/cmd_vel",
@@ -76,7 +74,6 @@ private:
   void odom_callback(const nav_msgs::msg::Odometry::SharedPtr message);
 
   bool is_gazebo_;
-  std::mutex state_mutex_;
   std::shared_ptr<geometry_msgs::msg::Twist> twist_;
   std::shared_ptr<std_msgs::msg::Empty> empty_;
   void stop();
@@ -97,6 +94,7 @@ private:
   void log_state_verbose() const;
   // Log state using INFO level
   void log_state() const;
+  void log_velocity() const;
 };
 } // namespace project_part2
-#endif // COMPOSITION__PROJECT_PART2_COMPONENT_HPP_
+#endif // SUBS_SCAN_PUB_CMD_HPP_

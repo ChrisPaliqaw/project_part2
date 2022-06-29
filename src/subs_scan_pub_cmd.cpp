@@ -1,6 +1,5 @@
 #include <functional>
 #include <rclcpp/rclcpp.hpp>
-#include <mutex>
 #include <string>
 #include <memory>
 #include <chrono>
@@ -131,7 +130,6 @@ using std::placeholders::_1;
 namespace project_part2
 {
 SubsScanPubCmd::SubsScanPubCmd(
-        const rclcpp::NodeOptions & options,
         std::string scan_topic,
         std::string odom_topic,
         std::string cmd_vel_topic,
@@ -139,7 +137,7 @@ SubsScanPubCmd::SubsScanPubCmd(
         std::string elevator_down_topic):
 
 
-    Node("subs_scan_pub_cmd", options),
+    Node("subs_scan_pub_cmd"),
     scan_topic(scan_topic),
     cmd_vel_topic(cmd_vel_topic),
     elevator_up_topic(elevator_up_topic),
@@ -151,7 +149,7 @@ SubsScanPubCmd::SubsScanPubCmd(
     RCLCPP_INFO_STREAM(get_logger(), "is_gazebo = " << (is_gazebo_ ? "true" : "false"));
     linear_velocity_ = (is_gazebo_ ? kGazeboLinearVelocity : kLinearVelocity);
 
-    timer_ptr_ = this->create_wall_timer(0.25s, std::bind(&SubsScanPubCmd::timer_callback, this));
+    timer_ptr_ = this->create_wall_timer(1s, std::bind(&SubsScanPubCmd::timer_callback, this));
 
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
         scan_topic, 10, std::bind(&SubsScanPubCmd::scan_callback, this, _1));
@@ -276,7 +274,7 @@ bool SubsScanPubCmd::is_stopped(geometry_msgs::msg::Vector3 v3)
 
 void SubsScanPubCmd::timer_callback()
 {
-    std::lock_guard<std::mutex> lock(state_mutex_);
+    // std::lock_guard<std::mutex> lock(state_mutex_);
     RCLCPP_DEBUG(this->get_logger(), "Behavior timer callback");
     
     switch (state_)
@@ -316,7 +314,7 @@ void SubsScanPubCmd::timer_callback()
 
 void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)
 {
-    std::lock_guard<std::mutex> lock(state_mutex_);
+    // std::lock_guard<std::mutex> lock(state_mutex_);
 
     tf2::Quaternion tf2_quaternion;
     // Convert geometry_msgs::msg::Quaternion to tf2::Quaternion
@@ -371,7 +369,7 @@ void SubsScanPubCmd::odom_callback(const nav_msgs::msg::Odometry::SharedPtr mess
 
 void SubsScanPubCmd::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
 {
-    std::lock_guard<std::mutex> lock(state_mutex_);
+    // std::lock_guard<std::mutex> lock(state_mutex_);
 
     if (!is_scan_state())
     {
@@ -430,10 +428,8 @@ void SubsScanPubCmd::elevator_up()
 
 void SubsScanPubCmd::publish_twist()
 {
-    if (state_ != State::stop)
-    {
-        cmd_vel_publisher_->publish(*twist_);
-    }
+    log_velocity();
+    cmd_vel_publisher_->publish(*twist_);
 }
 
 void SubsScanPubCmd::log_state_verbose() const
@@ -446,6 +442,10 @@ void SubsScanPubCmd::log_state_verbose() const
 void SubsScanPubCmd::log_state() const
 {
     RCLCPP_INFO(get_logger(), state_string(state_));
+}
+
+void SubsScanPubCmd::log_velocity() const
+{
     RCLCPP_INFO_STREAM(get_logger(), "linear: (" << twist_->linear.x << ", "  << twist_->linear.y << ", "  << twist_->linear.z << ")");
     RCLCPP_INFO_STREAM(get_logger(), "angular: (" << twist_->angular.x << ", "  << twist_->angular.y << ", "  << twist_->angular.z << ")");
 }
@@ -494,6 +494,17 @@ const std::string SubsScanPubCmd::kIsGazeboParameter = "is_gazebo";
 
 } // namespace project_part2
 
-#include "rclcpp_components/register_node_macro.hpp"
+int main(int argc, char *argv[]) {
+  rclcpp::init(argc, argv);
+  
+  std::shared_ptr<project_part2::SubsScanPubCmd> subs_scan_pub_cmd =
+      std::make_shared<project_part2::SubsScanPubCmd>();
 
-RCLCPP_COMPONENTS_REGISTER_NODE(project_part2::SubsScanPubCmd)
+  rclcpp::executors::MultiThreadedExecutor executor;
+  executor.add_node(subs_scan_pub_cmd);
+  executor.spin();
+
+  // Shutdown and exit.
+  rclcpp::shutdown();
+  return 0;
+}
