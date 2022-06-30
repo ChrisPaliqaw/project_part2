@@ -143,18 +143,36 @@ SubsScanPubCmd::SubsScanPubCmd(
     elevator_up_topic(elevator_up_topic),
     elevator_down_topic(elevator_down_topic),
     state_(State::forward_01)
+    // state_(State::stop) // For debugging elevator
 {
     this->declare_parameter<bool>(kIsGazeboParameter, false);
     this->get_parameter(kIsGazeboParameter, is_gazebo_);
     RCLCPP_INFO_STREAM(get_logger(), "is_gazebo = " << (is_gazebo_ ? "true" : "false"));
     linear_velocity_ = (is_gazebo_ ? kGazeboLinearVelocity : kLinearVelocity);
 
-    timer_ptr_ = this->create_wall_timer(1s, std::bind(&SubsScanPubCmd::timer_callback, this));
+    callback_group_ = this->create_callback_group(
+        rclcpp::CallbackGroupType::Reentrant);
+
+    timer_ptr_ = this->create_wall_timer(
+        1s,
+        std::bind(&SubsScanPubCmd::timer_callback, this),
+        callback_group_);
+
+    rclcpp::SubscriptionOptions laser_options;
+    laser_options.callback_group = callback_group_;
+    rclcpp::SubscriptionOptions odom_options;
+    odom_options.callback_group = callback_group_;
 
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
-        scan_topic, 10, std::bind(&SubsScanPubCmd::scan_callback, this, _1));
+        scan_topic,
+        10,
+        std::bind(&SubsScanPubCmd::scan_callback, this, _1),
+        laser_options);
     odom_subscription_ = create_subscription<nav_msgs::msg::Odometry>(
-        odom_topic, 10, std::bind(&SubsScanPubCmd::odom_callback, this, _1));
+        odom_topic,
+        10,
+        std::bind(&SubsScanPubCmd::odom_callback, this, _1),
+        odom_options);
 
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
     elevator_up_publisher_ = create_publisher<std_msgs::msg::Empty>(elevator_up_topic, 10);
@@ -165,7 +183,9 @@ SubsScanPubCmd::SubsScanPubCmd(
 
     twist_ = std::make_shared<geometry_msgs::msg::Twist>();
     empty_ = std::make_shared<std_msgs::msg::Empty>();
-    forward();
+
+    // For debugging why elevator not working
+    //elevator_up_publisher_->publish(*empty_);
 
     auto ret = rcutils_logging_set_logger_level(
         get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);

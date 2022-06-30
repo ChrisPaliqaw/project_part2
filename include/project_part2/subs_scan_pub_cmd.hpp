@@ -4,7 +4,6 @@
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-#include "project_part2/visibility_control.h"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "std_msgs/msg/detail/empty__struct.hpp"
 #include <cmath>
@@ -63,6 +62,8 @@ private:
       goal_turn_v3_; // Goal: odom pose z rotation when turning toward cart
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       laser_subscription_;
+
+  rclcpp::CallbackGroup::SharedPtr callback_group_;
 
   rclcpp::TimerBase::SharedPtr timer_ptr_;
   void timer_callback();

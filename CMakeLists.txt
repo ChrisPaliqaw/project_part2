@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(project_part2 VERSION 0.1.0 LANGUAGES CXX)
-set(NODE_NAME subs_scan_pub_cmd)
+set(SUB_SCAN_PUB_CMD_NODE_NAME subs_scan_pub_cmd)
+set(PRE_APPROACH_NODE_NAME pre_approach)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -35,9 +36,16 @@ endif()
 
 include_directories(include)
 
-add_executable(${NODE_NAME} src/subs_scan_pub_cmd.cpp)
+add_executable(${SUB_SCAN_PUB_CMD_NODE_NAME} src/subs_scan_pub_cmd.cpp)
+add_executable(${PRE_APPROACH_NODE_NAME} src/pre_approach.cpp)
 
-ament_target_dependencies(${NODE_NAME}
+ament_target_dependencies(${SUB_SCAN_PUB_CMD_NODE_NAME}
+  "rclcpp"
+  "rclcpp_components"
+  "sensor_msgs"
+  "geometry_msgs"
+  "nav_msgs")
+ament_target_dependencies(${PRE_APPROACH_NODE_NAME}
   "rclcpp"
   "rclcpp_components"
   "sensor_msgs"
@@ -45,7 +53,11 @@ ament_target_dependencies(${NODE_NAME}
   "nav_msgs")
 
 install(TARGETS
-   ${NODE_NAME}
+   ${SUB_SCAN_PUB_CMD_NODE_NAME}
+   DESTINATION lib/${PROJECT_NAME}
+)
+install(TARGETS
+   ${PRE_APPROACH_NODE_NAME}
    DESTINATION lib/${PROJECT_NAME}
 )
 

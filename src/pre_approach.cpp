@@ -1,13 +1,14 @@
 #include <functional>
 #include <rclcpp/rclcpp.hpp>
-#include <mutex>
 #include <string>
 #include <memory>
+#include <chrono>
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/detail/vector3__struct.hpp"
 #include "../include/project_part2/pre_approach.hpp"
 #include "rclcpp/logging.hpp"
 #include "rcutils/logging.h"
+#include "rosidl_runtime_cpp/traits.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/twist.hpp"
@@ -15,6 +16,7 @@
 #include "geometry_msgs/msg/vector3.hpp"
 #include "std_msgs/msg/empty.hpp"
 
+using namespace std::chrono_literals;
 
 /*
 ros2 interface show sensor_msgs/msg/LaserScan
@@ -134,7 +136,7 @@ PreApproach::PreApproach(
         std::string elevator_down_topic):
 
 
-    Node("pre_approach_node"),
+    Node("pre_approach"),
     scan_topic(scan_topic),
     cmd_vel_topic(cmd_vel_topic),
     elevator_up_topic(elevator_up_topic),
@@ -146,23 +148,36 @@ PreApproach::PreApproach(
     RCLCPP_INFO_STREAM(get_logger(), "is_gazebo = " << (is_gazebo_ ? "true" : "false"));
     linear_velocity_ = (is_gazebo_ ? kGazeboLinearVelocity : kLinearVelocity);
 
-    laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
-        scan_topic, 10, std::bind(&PreApproach::scan_callback, this, _1));
+    callback_group_ = this->create_callback_group(
+        rclcpp::CallbackGroupType::Reentrant);
 
+    timer_ptr_ = this->create_wall_timer(
+        0.5s,
+        std::bind(&PreApproach::timer_callback, this),
+        callback_group_);
+
+    rclcpp::SubscriptionOptions laser_options;
+    laser_options.callback_group = callback_group_;
+    rclcpp::SubscriptionOptions odom_options;
+    odom_options.callback_group = callback_group_;
+
+    laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
+        scan_topic,
+        10,
+        std::bind(&PreApproach::scan_callback, this, _1),
+        laser_options);
     odom_subscription_ = create_subscription<nav_msgs::msg::Odometry>(
-        odom_topic, 10, std::bind(&PreApproach::odom_callback, this, _1));
+        odom_topic,
+        10,
+        std::bind(&PreApproach::odom_callback, this, _1),
+        odom_options);
 
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
-
-    elevator_up_publisher_ = create_publisher<std_msgs::msg::Empty>(elevator_up_topic, 10);
-    elevator_down_publisher_ = create_publisher<std_msgs::msg::Empty>(elevator_down_topic, 10);
-
 
     RCLCPP_INFO_STREAM(this->get_logger(), "Create PreApproach");
 
     twist_ = std::make_shared<geometry_msgs::msg::Twist>();
     empty_ = std::make_shared<std_msgs::msg::Empty>();
-    forward();
 
     auto ret = rcutils_logging_set_logger_level(
         get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
@@ -218,11 +233,43 @@ bool PreApproach::is_buffer_stop_state () const
     case PreApproachState::stop_forward_01:
         [[fallthrough]];
     case PreApproachState::stop_turn:
-        [[fallthrough]];
-    case PreApproachState::stop_forward_02:
         return true;
     default:
         return false;
+    }
+}
+
+bool PreApproach::is_odom_state () const
+{
+    switch (state_)
+    {
+    case PreApproachState::stop_forward_01:
+        [[fallthrough]];
+    case PreApproachState::set_turn:
+        [[fallthrough]];
+    case PreApproachState::turn:
+        [[fallthrough]];
+    case PreApproachState::stop_turn:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool PreApproach::is_scan_state () const
+{
+    switch (state_)
+    {
+    case PreApproachState::stop_forward_01:
+        [[fallthrough]];
+    case PreApproachState::set_turn:
+        [[fallthrough]];
+    case PreApproachState::turn:
+        [[fallthrough]];
+    case PreApproachState::stop_turn:
+        return false;
+    default:
+        return true;
     }
 }
 
@@ -231,26 +278,47 @@ bool PreApproach::is_stopped(geometry_msgs::msg::Vector3 v3)
     return abs(magnitude(v3)) <= kTurnFuzz;
 }
 
-void PreApproach::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)
+void PreApproach::timer_callback()
 {
-    std::lock_guard<std::mutex> lock(state_mutex_);
-
-    // Only turning behavior is determined by odom
-    switch (state_)
+    if (is_complete_)
     {
-    case PreApproachState::stop_forward_01:
-        [[fallthrough]];
-    case PreApproachState::set_turn:
-        [[fallthrough]];
-    case PreApproachState::turn:
-        [[fallthrough]];
-    case PreApproachState::stop_turn:
-        [[fallthrough]];
-    case PreApproachState::stop_forward_02:
-        break;
-    default:
         return;
     }
+    // std::lock_guard<std::mutex> lock(state_mutex_);
+    RCLCPP_DEBUG(this->get_logger(), "Behavior timer callback");
+    
+    switch (state_)
+    {
+    case PreApproachState::forward_01:
+        forward();
+        break;
+    case PreApproachState::stop_forward_01:
+        stop();
+        break;
+    case PreApproachState::set_turn:
+        // Handled in odom
+        break;
+    case PreApproachState::turn:
+        turn();
+        break;
+    case PreApproachState::stop_turn:
+        stop();
+        break;
+    case PreApproachState::stop:
+        stop();
+        is_complete_ = true;
+        break;
+    }
+    publish_twist();
+}
+
+void PreApproach::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)
+{
+    if (is_complete_)
+    {
+        return;
+    }
+    // std::lock_guard<std::mutex> lock(state_mutex_);
 
     tf2::Quaternion tf2_quaternion;
     // Convert geometry_msgs::msg::Quaternion to tf2::Quaternion
@@ -258,7 +326,12 @@ void PreApproach::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message
 
     geometry_msgs::msg::Vector3 current_rotation_v3 = euler_from_quaternion(tf2_quaternion);
 
-    if (is_buffer_stop_state())
+    // Only turning behavior is determined by odom
+    if (!is_odom_state())
+    {
+        return;
+    }
+    else if (is_buffer_stop_state())
     {
         bool stopped = is_stopped(message->twist.twist.angular) && is_stopped(message->twist.twist.linear);
         if (stopped)
@@ -266,33 +339,18 @@ void PreApproach::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message
             switch (state_) {
             case PreApproachState::stop_forward_01:
                 state_ = PreApproachState::set_turn;
-                RCLCPP_INFO_STREAM(get_logger(), "SET TURN IN THE PROPER PLACE");
                 log_state();
                 break;
             case PreApproachState::stop_turn:
-                state_ = PreApproachState::forward_02;
-                forward();
-                log_state();
-                break;
-            case PreApproachState::stop_forward_02:
-                state_ = PreApproachState::elevator_up;
-
-                elevator_up();
-                log_state();
-                return;
-                /*
                 state_ = PreApproachState::stop;
-                stop();
                 log_state();
-                */
                 break;
             default:
                 RCLCPP_ERROR_STREAM(get_logger(), "Unexpected state: " << state_string(state_));
             }
         }
     }
-
-    if (state_ == PreApproachState::set_turn) {
+    else if (state_ == PreApproachState::set_turn) {
         RCLCPP_INFO_STREAM(get_logger(), "SETTING TURN");
         tf2::Quaternion q_rot;
         // Rotate the current pose by 90 degrees about Z to get our goal pose
@@ -301,68 +359,39 @@ void PreApproach::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message
         goal_turn.normalize();
         goal_turn_v3_ = PreApproach::euler_from_quaternion(goal_turn);
         state_ = PreApproachState::turn;
-        turn();
-        log_state();
     }
-
     else if ((state_ == PreApproachState::turn) && (abs(current_rotation_v3.z - goal_turn_v3_.z) <= kTurnFuzz))
     {
         state_ = PreApproachState::stop_turn;
-        stop();
         log_state();
     }
-    
-    publish_twist();
 }
 
 void PreApproach::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
 {
-    // turning behavior is determined by odom
-    switch (state_)
+    // std::lock_guard<std::mutex> lock(state_mutex_);
+    if (is_complete_)
     {
-    case PreApproachState::stop_forward_01:
-        [[fallthrough]];
-    case PreApproachState::set_turn:
-        [[fallthrough]];
-    case PreApproachState::turn:
-        [[fallthrough]];
-    case PreApproachState::stop_turn:
-        [[fallthrough]];
-    case PreApproachState::stop_forward_02:
         return;
-    default:
-        break;
     }
-
-    std::lock_guard<std::mutex> lock(state_mutex_);
+    if (!is_scan_state())
+    {
+        return;
+    }
+    
     RCLCPP_DEBUG_STREAM(get_logger(), message->ranges[kFrontScanRange]);
     switch (state_)
     {
-        // Turning behavior is not determined by the scan
-        case PreApproachState::set_turn:
-            [[fallthrough]];
-        case PreApproachState::turn:
-            return;
         case PreApproachState::forward_01:
             if (message->ranges[kFrontScanRange] < kCloseWallDistance)
             {
                 state_ = PreApproachState::stop_forward_01;
-                stop();
-                log_state();
-            }
-            break;
-        case PreApproachState::forward_02:
-            if (message->ranges[kFrontScanRange] < kCloseCartDistance)
-            {
-                state_ = PreApproachState::stop_forward_02;
-                stop();
                 log_state();
             }
             break;
         default:
             break;
     }
-    publish_twist();
 }
 
 void PreApproach::stop()
@@ -387,18 +416,10 @@ void PreApproach::forward()
     twist_->linear.x = linear_velocity_;
 }
 
-void PreApproach::elevator_up()
-{
-    RCLCPP_INFO(get_logger(), "Publishing elevator_up");
-    elevator_up_publisher_->publish(*empty_);
-}
-
 void PreApproach::publish_twist()
 {
-    if (state_ != PreApproachState::stop)
-    {
-        cmd_vel_publisher_->publish(*twist_);
-    }
+    log_velocity();
+    cmd_vel_publisher_->publish(*twist_);
 }
 
 void PreApproach::log_state_verbose() const
@@ -411,50 +432,60 @@ void PreApproach::log_state_verbose() const
 void PreApproach::log_state() const
 {
     RCLCPP_INFO(get_logger(), state_string(state_));
+}
+
+void PreApproach::log_velocity() const
+{
     RCLCPP_INFO_STREAM(get_logger(), "linear: (" << twist_->linear.x << ", "  << twist_->linear.y << ", "  << twist_->linear.z << ")");
     RCLCPP_INFO_STREAM(get_logger(), "angular: (" << twist_->angular.x << ", "  << twist_->angular.y << ", "  << twist_->angular.z << ")");
 }
 
 std::string PreApproach::state_string(PreApproachState state)
 {
-    std::string return_value;
+    std::string string_value;
     switch (state)
     {
         case PreApproachState::forward_01:
-            return_value = "Moving toward the back wall";
+            string_value = "Moving toward the back wall";
             break;
         case PreApproachState::stop_forward_01:
-            return_value = "Stopping after moving toward the back wall";
+            string_value = "Stopping after moving toward the back wall";
             break;
         case PreApproachState::set_turn:
-            return_value = "Setting the turn speed";
+            string_value = "Setting the turn speed";
             break;
         case PreApproachState::turn:
-            return_value = "Turning toward the cart";
+            string_value = "Turning toward the cart";
             break;
         case PreApproachState::stop_turn:
-            return_value = "Stopping after turning toward the cart";
-            break;
-        case PreApproachState::forward_02:
-            return_value = "Moving toward the cart";
-            break;
-        case PreApproachState::stop_forward_02:
-            return_value = "Stopping inside the cart";
-            break;
-        case PreApproachState::elevator_up:
-            return_value = "Raising the elevator";
+            string_value = "Stopping after turning toward the cart";
             break;
         case PreApproachState::stop:
-            return_value = "Arrived at the cart";
+            string_value = "Inside the cart with the elevator raised";
             break;
         default:
-            return_value = "Error: unknown robot state";
+            string_value = "Error: unknown robot state";
             break;
     }
-    return return_value;
+    return string_value;
 }
 
 const double PreApproach::kGoalAngularDisplacement = -(M_PI / 2.0);
 const std::string PreApproach::kIsGazeboParameter = "is_gazebo";
 
 } // namespace project_part2
+
+int main(int argc, char *argv[]) {
+  rclcpp::init(argc, argv);
+  
+  std::shared_ptr<project_part2::PreApproach> pre_approach =
+      std::make_shared<project_part2::PreApproach>();
+
+  rclcpp::executors::MultiThreadedExecutor executor;
+  executor.add_node(pre_approach);
+  executor.spin();
+
+  // Shutdown and exit.
+  rclcpp::shutdown();
+  return 0;
+}
