@@ -443,7 +443,17 @@ void SubsScanPubCmd::forward()
 void SubsScanPubCmd::elevator_up()
 {
     RCLCPP_INFO(get_logger(), "Publishing elevator_up");
-    elevator_up_publisher_->publish(*empty_);
+
+    rclcpp::WallRate loop_rate(2);
+    const int attempt_limit = 2;
+    int attempts = 0;
+    while (rclcpp::ok() && (attempts < attempt_limit)) {
+
+        elevator_up_publisher_->publish(*empty_);
+        // rclcpp::spin_some(*this);
+        loop_rate.sleep();
+        attempts += 1;
+    }
 }
 
 void SubsScanPubCmd::publish_twist()

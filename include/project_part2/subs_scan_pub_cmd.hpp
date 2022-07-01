@@ -5,7 +5,7 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
-#include "std_msgs/msg/detail/empty__struct.hpp"
+#include "std_msgs/msg/empty.hpp"
 #include <cmath>
 #include <iostream>
 #include <memory>

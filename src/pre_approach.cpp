@@ -14,7 +14,6 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "geometry_msgs/msg/vector3.hpp"
-#include "std_msgs/msg/empty.hpp"
 
 using namespace std::chrono_literals;
 
@@ -177,7 +176,6 @@ PreApproach::PreApproach(
     RCLCPP_INFO_STREAM(this->get_logger(), "Create PreApproach");
 
     twist_ = std::make_shared<geometry_msgs::msg::Twist>();
-    empty_ = std::make_shared<std_msgs::msg::Empty>();
 
     auto ret = rcutils_logging_set_logger_level(
         get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);

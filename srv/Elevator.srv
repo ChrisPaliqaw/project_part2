@@ -1,0 +1,3 @@
+bool is_up     # True: elevator up, False: elevator down
+---
+bool success   # Elevator up or down successful?

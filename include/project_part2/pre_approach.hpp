@@ -5,7 +5,6 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
-#include "std_msgs/msg/detail/empty__struct.hpp"
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -73,7 +72,6 @@ private:
 
   bool is_gazebo_;
   std::shared_ptr<geometry_msgs::msg::Twist> twist_;
-  std::shared_ptr<std_msgs::msg::Empty> empty_;
   void stop();
   void turn();
   void forward();
