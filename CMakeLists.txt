@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(project_part2)
 set(SUB_SCAN_PUB_CMD_NODE_NAME subs_scan_pub_cmd)
 set(PRE_APPROACH_NODE_NAME pre_approach)
-set(ELEVATOR_SERVICE elevator_service)
+set(APPROACH_SHELF approach_shelf)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -28,8 +28,8 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
-# For Message Generation
-find_package(rosidl_default_generators REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(phase2_custom_interfaces REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -46,7 +46,7 @@ include_directories(include)
 
 add_executable(${SUB_SCAN_PUB_CMD_NODE_NAME} src/subs_scan_pub_cmd.cpp)
 add_executable(${PRE_APPROACH_NODE_NAME} src/pre_approach.cpp)
-add_executable(${ELEVATOR_SERVICE} src/elevator_service.cpp)
+add_executable(${APPROACH_SHELF} src/${APPROACH_SHELF}.cpp)
 
 ament_target_dependencies(${SUB_SCAN_PUB_CMD_NODE_NAME}
   "rclcpp"
@@ -59,9 +59,12 @@ ament_target_dependencies(${PRE_APPROACH_NODE_NAME}
   "sensor_msgs"
   "geometry_msgs"
   "nav_msgs")
-ament_target_dependencies(${ELEVATOR_SERVICE}
+ament_target_dependencies(${APPROACH_SHELF}
   "rclcpp"
-  "std_msgs")
+  "sensor_msgs"
+  "geometry_msgs"
+  "nav_msgs"
+  "tf2_ros")
 
 install(TARGETS
    ${SUB_SCAN_PUB_CMD_NODE_NAME}
@@ -72,7 +75,7 @@ install(TARGETS
    DESTINATION lib/${PROJECT_NAME}
 )
 install(TARGETS
-   ${ELEVATOR_SERVICE}
+   ${APPROACH_SHELF}
    DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -80,11 +83,6 @@ install(TARGETS
 install(DIRECTORY
   launch
   DESTINATION share/${PROJECT_NAME}/
-)
-
-# For Message Generation
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "srv/Elevator.srv"
 )
 
 ament_package()
