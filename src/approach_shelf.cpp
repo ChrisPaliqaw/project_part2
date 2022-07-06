@@ -14,6 +14,10 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <tf2/exceptions.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 #include "geometry_msgs/msg/vector3.hpp"
 
 using namespace std::chrono_literals;
@@ -125,6 +129,37 @@ float64 z 0
 float64 w 1
 */
 
+/*
+user:~$ ros2 interface show geometry_msgs/msg/TransformStamped
+# This expresses a transform from coordinate frame header.frame_id
+# to the coordinate frame child_frame_id at the time of header.stamp
+#
+# This message is mostly used by the
+# <a href="https://index.ros.org/p/tf2/">tf2</a> package.
+# See its documentation for more information.
+#
+# The child_frame_id is necessary in addition to the frame_id
+# in the Header to communicate the full reference for the transform
+# in a self contained message.
+
+# The frame id in the header is used as the reference frame of this transform.
+std_msgs/Header header
+
+# The frame id of the child frame to which this transform points.
+string child_frame_id
+
+# Translation and rotation in 3-dimensions of child_frame_id from header.frame_id.
+Transform transform
+*/
+
+/*
+user:~$ ros2 interface show geometry_msgs/msg/Transform
+# This represents the transform between two coordinate frames in free space.
+
+Vector3 translation
+Quaternion rotation
+*/
+
 
 namespace project_part2
 {
@@ -144,18 +179,16 @@ ApproachShelf::ApproachShelf(
     RCLCPP_INFO_STREAM(get_logger(), "is_gazebo = " << (is_gazebo_ ? "true" : "false"));
     linear_velocity_ = (is_gazebo_ ? kGazeboLinearVelocity : kLinearVelocity);
 
-    /*
-    X self._transform_broadcaster = tf.TransformBroadcaster()
-    X    self._ctrl_c = False
-        self._listener = tf.TransformListener()
-    X    self._rate = rospy.Rate(1)
-    X    rospy.on_shutdown(self._shutdownhook)
-        self._base_link_trans = None
-        self._base_link_rot = None
-        self._lock = threading.Lock()
-        self.__robot_odom_tf()
-        */
+    // Need to call
+    // self.__robot_odom_tf()
+    
+    // https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Listener-Cpp.html
     tf_publisher_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
+
+    tf_buffer_ =
+      std::make_unique<tf2_ros::Buffer>(this->get_clock());
+    transform_listener_ =
+      std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
     
 
     callback_group_ = this->create_callback_group(
@@ -481,6 +514,10 @@ std::string ApproachShelf::state_string(ApproachShelfState state)
 
 const double ApproachShelf::kGoalAngularDisplacement = -(M_PI / 2.0);
 const std::string ApproachShelf::kIsGazeboParameter = "is_gazebo";
+const std::string kScanTopic = "scan";
+const std::string kOdomFrame = "robot_odom";
+const std::string kCartFrame = "static_cart";
+const std::string kRobotLaserBaseLink = "robot_front_laser_link";
 
 } // namespace project_part2
 
