@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(project_part2)
 set(SUB_SCAN_PUB_CMD_NODE_NAME subs_scan_pub_cmd)
 set(PRE_APPROACH_NODE_NAME pre_approach)
-set(APPROACH_SHELF approach_shelf)
+set(DETECT_SHELF_NODE_NAME detect_shelf)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -44,9 +44,9 @@ endif()
 
 include_directories(include)
 
-add_executable(${SUB_SCAN_PUB_CMD_NODE_NAME} src/subs_scan_pub_cmd.cpp)
-add_executable(${PRE_APPROACH_NODE_NAME} src/pre_approach.cpp)
-add_executable(${APPROACH_SHELF} src/${APPROACH_SHELF}.cpp)
+add_executable(${SUB_SCAN_PUB_CMD_NODE_NAME} src/${SUB_SCAN_PUB_CMD_NODE_NAME}.cpp)
+add_executable(${PRE_APPROACH_NODE_NAME} src/${PRE_APPROACH_NODE_NAME}.cpp)
+add_executable(${DETECT_SHELF_NODE_NAME} src/${DETECT_SHELF_NODE_NAME}.cpp)
 
 ament_target_dependencies(${SUB_SCAN_PUB_CMD_NODE_NAME}
   "rclcpp"
@@ -59,7 +59,7 @@ ament_target_dependencies(${PRE_APPROACH_NODE_NAME}
   "sensor_msgs"
   "geometry_msgs"
   "nav_msgs")
-ament_target_dependencies(${APPROACH_SHELF}
+ament_target_dependencies(${DETECT_SHELF_NODE_NAME}
   "rclcpp"
   "sensor_msgs"
   "geometry_msgs"
@@ -75,7 +75,7 @@ install(TARGETS
    DESTINATION lib/${PROJECT_NAME}
 )
 install(TARGETS
-   ${APPROACH_SHELF}
+   ${DETECT_SHELF_NODE_NAME}
    DESTINATION lib/${PROJECT_NAME}
 )
 
