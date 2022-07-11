@@ -19,6 +19,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
 #include "geometry_msgs/msg/vector3.hpp"
+#include "tf2/LinearMath/Quaternion.h"
 
 using namespace std::chrono_literals;
 using namespace std::placeholders;
@@ -263,6 +264,17 @@ void DetectShelf::timer_callback()
 
 void DetectShelf::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)
 {
+    this->base_link_trans_.x = message->pose.pose.position.x;
+    this->base_link_trans_.y = message->pose.pose.position.y;
+    this->base_link_trans_.z = message->pose.pose.position.z;
+
+    tf2::Quaternion orientation_quaternion;
+    tf2::convert(message->pose.pose.orientation, orientation_quaternion);
+    // https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Quaternion-Fundamentals.html
+    auto orientation_euler = euler_from_quaternion(orientation_quaternion);
+    this->base_link_rot_.x = orientation_euler.x;
+    this->base_link_rot_.y = orientation_euler.y;
+    this->base_link_rot_.z = orientation_euler.z;
 }
 
 void DetectShelf::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
