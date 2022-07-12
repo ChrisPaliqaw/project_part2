@@ -1,4 +1,5 @@
 #include <functional>
+#include <numeric>
 #include <string>
 #include <memory>
 #include <chrono>
@@ -270,6 +271,75 @@ void DetectShelf::timer_callback()
         this->base_link_rot_.y << ", " <<
         this->base_link_rot_.z << ")"
     );
+    
+    if (!is_base_link_trans_and_rot_) {
+        RCLCPP_INFO_STREAM(this->get_logger(), "No odom data yet recieved.");
+        return;
+    }
+
+    unsigned long center_plate_index = DetectShelf::getAverageHighIntensityIndex(laser_scan_);
+    RCLCPP_INFO_STREAM(get_logger(), "center_plate_index = " << center_plate_index);
+    
+    std::vector<int> left_indexes, right_indexes;
+    std::vector<float> left_ranges, right_ranges;
+    for (unsigned long index = 0; index < laser_scan_->intensities.size(); ++index) {
+        if (index < center_plate_index) {
+            left_indexes.push_back(index);
+            left_ranges.push_back(laser_scan_->ranges[index]);
+        } else {
+            right_indexes.push_back(index);
+            right_ranges.push_back(laser_scan_->ranges[index]);
+        }
+    }
+    double left_range_total = std::accumulate(left_ranges.begin(), left_ranges.end(), 0);
+    double left_plate_range = left_range_total / left_ranges.size();
+
+    double right_range_total = std::accumulate(right_ranges.begin(), right_ranges.end(), 0);
+    double right_plate_range = right_range_total / right_ranges.size();
+
+    double left_plate_index_total = std::accumulate(left_indexes.begin(), left_indexes.end(), 0);
+    double left_plate_index = left_plate_index_total / left_indexes.size();
+
+    double right_plate_index_total = std::accumulate(right_indexes.begin(), right_indexes.end(), 0);
+    double right_plate_index = right_plate_index_total / right_indexes.size();
+
+    auto center_index = laser_scan_->intensities.size() / 2;
+    auto left_plate_yaw = (left_plate_index - center_index) * laser_scan_->angle_increment;
+    auto right_plate_yaw = (right_plate_index - center_index) * laser_scan_->angle_increment;
+
+    auto left_tf = tfRelativeToRobot(left_plate_yaw, left_plate_range);
+    auto right_tf = tfRelativeToRobot(right_plate_yaw, right_plate_range);
+
+    RCLCPP_INFO_STREAM(get_logger(), "left tf = " << left_tf.first << ", " << left_tf.second);
+    RCLCPP_INFO_STREAM(get_logger(), "right tf = " << right_tf.first << ", " << right_tf.second);
+
+    auto slope_surface_normal = surfaceNormal(
+        left_tf.first, left_tf.second, right_tf.first, right_tf.second);
+    RCLCPP_INFO_STREAM(get_logger(), "slope_surface_normal = " << slope_surface_normal);
+    auto radians_surface_normal = atan(slope_surface_normal);
+
+    tf2::Quaternion orientation_quaternion;
+    orientation_quaternion.setRPY(0, 0, radians_surface_normal); 
+
+    std::pair<double, double> center_tf;
+    center_tf.first = (left_tf.first + right_tf.first) / 2;
+    center_tf.second = (left_tf.second + right_tf.second) / 2;
+
+    rclcpp::Time now = this->get_clock()->now();
+    geometry_msgs::msg::TransformStamped t;
+
+    t.header.stamp = now;
+    t.header.frame_id = DetectShelf::kOdomFrame;
+    t.child_frame_id = DetectShelf::kCartFrame;
+    t.transform.translation.x = center_tf.first;
+    t.transform.translation.y = center_tf.second;
+    t.transform.translation.z = 0.0;
+    t.transform.rotation.x = orientation_quaternion.x();
+    t.transform.rotation.y = orientation_quaternion.y();
+    t.transform.rotation.z = orientation_quaternion.z();
+    t.transform.rotation.w = orientation_quaternion.w();
+
+    tf_publisher_->sendTransform(t);
 }
 
 void DetectShelf::odomCallback(const nav_msgs::msg::Odometry::SharedPtr message)
@@ -291,28 +361,23 @@ void DetectShelf::odomCallback(const nav_msgs::msg::Odometry::SharedPtr message)
 
 void DetectShelf::scanCallback([[maybe_unused]] const sensor_msgs::msg::LaserScan::SharedPtr message)
 {
-    if (!is_base_link_trans_and_rot_) {
-        return;
-    }
-
-    
+    laser_scan_ = message;
 }
 
-/*
-@staticmethod
-    def getAverageHighIntensityIndex(laser_scan: LaserScan) -> int:
-        high_intensity_indexes = []
-        for i in range(len(laser_scan.intensities)):
-            if laser_scan.intensities[i] == DetectCart.PLATE_INTENSITY:
-                high_intensity_indexes.append(i)
-        if len(high_intensity_indexes) < DetectCart.PLATE_DETECTION_FAILURE_THRESHOLD:
-            raise ValueError(f"{len(high_intensity_indexes)=} < {DetectCart.PLATE_DETECTION_FAILURE_THRESHOLD=}")
-        return statistics.mean(high_intensity_indexes)*/
-int DetectShelf::getAverageHighIntensityIndex([[maybe_unused]] sensor_msgs::msg::LaserScan::SharedPtr laser_scan)
+unsigned long DetectShelf::getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan)
 {
-    std::vector<int> high_intensity_indexes;
-
-    return 0;
+    std::vector<unsigned long> high_intensity_indexes;
+    for (unsigned long i = 0; i < laser_scan->intensities.size(); ++i) {
+        if (laser_scan->intensities[i] == DetectShelf::kPlateIntensity) {
+            high_intensity_indexes.push_back(i);
+        }
+    }
+    if (high_intensity_indexes.size() < DetectShelf::kPlateDetectionFailureThreshold) {
+        return kIndexFailureValue;
+    } else {
+        long sum = std::accumulate(high_intensity_indexes.begin(), high_intensity_indexes.end(), 0);
+        return sum / high_intensity_indexes.size();
+    }
 }
 
 std::pair<double, double> DetectShelf::tfRelativeToRobot(const double yaw, const double distance)

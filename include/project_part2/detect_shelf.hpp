@@ -26,7 +26,7 @@ public:
   static constexpr double kPi = 3.141592653589793238463;
   static const std::string kScanTopic;
   static const std::string kOdomTopic;
-  static constexpr int kPlateIntensity = 8000;
+  static constexpr float kPlateIntensity = 8000;
   // Intense readings in order to be able to detect a plate
   static constexpr int kPlateDetectionFailureThreshold = 6;
   static const std::string kOdomFrame;
@@ -57,10 +57,12 @@ private:
 
   geometry_msgs::msg::Vector3 base_link_trans_;
   geometry_msgs::msg::Vector3 base_link_rot_;
+  sensor_msgs::msg::LaserScan::SharedPtr laser_scan_;
   bool is_base_link_trans_and_rot_ = false; // has the odom callback been called yet?
 
   std::pair<double, double> tfRelativeToRobot(const double yaw, const double distance);
-  static int getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan);
+  static unsigned long getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan);
+  static constexpr double kIndexFailureValue = -1;
   
   static double magnitude(geometry_msgs::msg::Vector3 v3);
 };
