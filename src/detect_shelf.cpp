@@ -258,7 +258,18 @@ double DetectShelf::magnitude(geometry_msgs::msg::Vector3 v3)
 
 void DetectShelf::timer_callback()
 {
-
+    RCLCPP_INFO_STREAM(this->get_logger(),
+        "position: (" <<
+        this->base_link_trans_.x << ", " <<
+        this->base_link_trans_.y << ", " <<
+        this->base_link_trans_.z << ")"
+    );
+    RCLCPP_INFO_STREAM(this->get_logger(),
+        "rotation: (" <<
+        this->base_link_rot_.x << ", " <<
+        this->base_link_rot_.y << ", " <<
+        this->base_link_rot_.z << ")"
+    );
 }
 
 void DetectShelf::odomCallback(const nav_msgs::msg::Odometry::SharedPtr message)
@@ -284,6 +295,7 @@ void DetectShelf::scanCallback([[maybe_unused]] const sensor_msgs::msg::LaserSca
         return;
     }
 
+    
 }
 
 /*
