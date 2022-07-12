@@ -159,7 +159,7 @@ namespace project_part2
 DetectShelf::DetectShelf():
 
 
-    Node("dectect_shelf")
+    Node("detect_shelf")
 {
 
     tf_publisher_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
@@ -180,12 +180,12 @@ DetectShelf::DetectShelf():
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
         kScanTopic,
         10,
-        std::bind(&DetectShelf::scan_callback, this, _1),
+        std::bind(&DetectShelf::scanCallback, this, _1),
         laser_options);
     odom_subscription_ = create_subscription<nav_msgs::msg::Odometry>(
         kOdomTopic,
         10,
-        std::bind(&DetectShelf::odom_callback, this, _1),
+        std::bind(&DetectShelf::odomCallback, this, _1),
         odom_options);
 
     RCLCPP_INFO_STREAM(this->get_logger(), "Create DetectShelf");
@@ -199,7 +199,7 @@ DetectShelf::DetectShelf():
 }
 
 // Note that the z is ignored
-geometry_msgs::msg::Vector3 DetectShelf::yawAndDistanceToRosXY(const double yaw, double distance)
+std::pair<double, double> DetectShelf::yawAndDistanceToRosXY(const double yaw, double distance)
 {
     if (distance > DetectShelf::kRangeMax) {
         distance = DetectShelf::kRangeMax;
@@ -208,9 +208,7 @@ geometry_msgs::msg::Vector3 DetectShelf::yawAndDistanceToRosXY(const double yaw,
     double theta = (DetectShelf::kPi / 2.0) + yaw;
     double y = -(distance * cos(theta));
     double x = distance * sin(theta);
-    geometry_msgs::msg::Vector3 return_value;
-    return_value.set__x(x);
-    return_value.set__y(y);
+    std::pair<double, double> return_value(x, y);
     return return_value;
 }
 
@@ -222,7 +220,7 @@ double DetectShelf::surfaceNormal(const double x1, const double y1, const double
 
 
 // Code adapted from https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-geometry_msgs::msg::Vector3 DetectShelf::euler_from_quaternion(tf2::Quaternion q)
+geometry_msgs::msg::Vector3 DetectShelf::eulerFromQuaternion(const tf2::Quaternion q)
 {
     geometry_msgs::msg::Vector3 v3;
 
@@ -260,9 +258,10 @@ double DetectShelf::magnitude(geometry_msgs::msg::Vector3 v3)
 
 void DetectShelf::timer_callback()
 {
+
 }
 
-void DetectShelf::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message)
+void DetectShelf::odomCallback(const nav_msgs::msg::Odometry::SharedPtr message)
 {
     this->base_link_trans_.x = message->pose.pose.position.x;
     this->base_link_trans_.y = message->pose.pose.position.y;
@@ -271,14 +270,46 @@ void DetectShelf::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message
     tf2::Quaternion orientation_quaternion;
     tf2::convert(message->pose.pose.orientation, orientation_quaternion);
     // https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Quaternion-Fundamentals.html
-    auto orientation_euler = euler_from_quaternion(orientation_quaternion);
+    auto orientation_euler = eulerFromQuaternion(orientation_quaternion);
     this->base_link_rot_.x = orientation_euler.x;
     this->base_link_rot_.y = orientation_euler.y;
     this->base_link_rot_.z = orientation_euler.z;
+
+    is_base_link_trans_and_rot_ = true;
 }
 
-void DetectShelf::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
+void DetectShelf::scanCallback([[maybe_unused]] const sensor_msgs::msg::LaserScan::SharedPtr message)
 {
+    if (!is_base_link_trans_and_rot_) {
+        return;
+    }
+
+}
+
+/*
+@staticmethod
+    def getAverageHighIntensityIndex(laser_scan: LaserScan) -> int:
+        high_intensity_indexes = []
+        for i in range(len(laser_scan.intensities)):
+            if laser_scan.intensities[i] == DetectCart.PLATE_INTENSITY:
+                high_intensity_indexes.append(i)
+        if len(high_intensity_indexes) < DetectCart.PLATE_DETECTION_FAILURE_THRESHOLD:
+            raise ValueError(f"{len(high_intensity_indexes)=} < {DetectCart.PLATE_DETECTION_FAILURE_THRESHOLD=}")
+        return statistics.mean(high_intensity_indexes)*/
+int DetectShelf::getAverageHighIntensityIndex([[maybe_unused]] sensor_msgs::msg::LaserScan::SharedPtr laser_scan)
+{
+    std::vector<int> high_intensity_indexes;
+
+    return 0;
+}
+
+std::pair<double, double> DetectShelf::tfRelativeToRobot(const double yaw, const double distance)
+{
+    double adjusted_yaw = yaw - base_link_rot_.z;
+    std::pair<double, double> return_value = yawAndDistanceToRosXY(adjusted_yaw, distance);
+    return_value.first += base_link_trans_.x;
+    return_value.second -= base_link_trans_.y;
+    return return_value;
 }
 
 const std::string DetectShelf::kScanTopic = "scan";

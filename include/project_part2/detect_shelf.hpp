@@ -21,7 +21,7 @@ class DetectShelf : public rclcpp::Node {
 public:
   explicit DetectShelf();
 
-  static geometry_msgs::msg::Vector3 euler_from_quaternion(tf2::Quaternion q);
+  static geometry_msgs::msg::Vector3 eulerFromQuaternion(const tf2::Quaternion q);
 
   static constexpr double kPi = 3.141592653589793238463;
   static const std::string kScanTopic;
@@ -35,7 +35,7 @@ public:
   static const std::string kRobotLaserBaseLink;
   static constexpr double kRangeMax = 20.0;
 
-  static geometry_msgs::msg::Vector3 yawAndDistanceToRosXY(const double yaw, double distance);
+  static std::pair<double, double> yawAndDistanceToRosXY(const double yaw, double distance);
   static double surfaceNormal(const double x1, const double y1, const double x2, const double y2);
 
 private: 
@@ -49,17 +49,20 @@ private:
   void timer_callback();
 
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_publisher_;
-  void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message);
-  void odom_callback(const nav_msgs::msg::Odometry::SharedPtr message);
+  void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr message);
+  void odomCallback(const nav_msgs::msg::Odometry::SharedPtr message);
 
   std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
   geometry_msgs::msg::Vector3 base_link_trans_;
   geometry_msgs::msg::Vector3 base_link_rot_;
+  bool is_base_link_trans_and_rot_ = false; // has the odom callback been called yet?
+
+  std::pair<double, double> tfRelativeToRobot(const double yaw, const double distance);
+  static int getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan);
   
   static double magnitude(geometry_msgs::msg::Vector3 v3);
-  static bool is_stopped(geometry_msgs::msg::Vector3 v3);
 };
 } // namespace project_part2
 #endif // PROJECT_PART2_DETECT_SHELF_HPP_
