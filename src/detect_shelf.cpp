@@ -192,7 +192,7 @@ DetectShelf::DetectShelf():
     RCLCPP_INFO_STREAM(this->get_logger(), "Create DetectShelf");
 
     auto ret = rcutils_logging_set_logger_level(
-        get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+        get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
     if (ret != RCUTILS_RET_OK) {
         RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
         rcutils_reset_error();
@@ -281,14 +281,18 @@ void DetectShelf::timer_callback()
     if (center_plate_index == kIndexFailureValue) {
         return;
     }
-    RCLCPP_INFO_STREAM(
+    RCLCPP_DEBUG_STREAM(
         get_logger(),
         "center_plate_index = " << center_plate_index << " / " << laser_scan_->intensities.size());
     
     std::vector<int> left_indexes, right_indexes;
     std::vector<float> left_ranges, right_ranges;
     for (unsigned long index = 0; index < laser_scan_->intensities.size(); ++index) {
-        if (laser_scan_->intensities[index] == DetectShelf::kPlateIntensity) {
+        int current_intensity = round(laser_scan_->intensities[index]);
+        if (current_intensity > 0) {
+            RCLCPP_INFO_STREAM(get_logger(), "current_intensity = " << current_intensity);
+        }
+        if (current_intensity == DetectShelf::kPlateIntensity) {
             if (index < center_plate_index) {
                 left_indexes.push_back(index);
                 left_ranges.push_back(laser_scan_->ranges[index]);
@@ -298,14 +302,19 @@ void DetectShelf::timer_callback()
             }
         }
     }
-    double left_range_total = std::accumulate(left_ranges.begin(), left_ranges.end(), 0);
-    double left_plate_range = left_range_total / left_ranges.size();
-    RCLCPP_INFO_STREAM(
+    RCLCPP_DEBUG_STREAM(get_logger(), "left_ranges.size() = " << left_ranges.size());
+    RCLCPP_DEBUG_STREAM(get_logger(), "right_ranges.size() = " << right_ranges.size());
+
+    float left_range_total = std::accumulate(left_ranges.begin(), left_ranges.end(), 0.0);
+    RCLCPP_DEBUG_STREAM(get_logger(), "left_range_total = " << left_range_total);
+    float left_plate_range = left_range_total / left_ranges.size();
+    RCLCPP_DEBUG_STREAM(
         get_logger(), "left_plate_range = " << left_plate_range);
 
-    double right_range_total = std::accumulate(right_ranges.begin(), right_ranges.end(), 0);
-    double right_plate_range = right_range_total / right_ranges.size();
-    RCLCPP_INFO_STREAM(
+    float right_range_total = std::accumulate(right_ranges.begin(), right_ranges.end(), 0.0);
+    RCLCPP_DEBUG_STREAM(get_logger(), "right_range_total = " << right_range_total);
+    float right_plate_range = right_range_total / right_ranges.size();
+    RCLCPP_DEBUG_STREAM(
         get_logger(), "right_plate_range = " << right_plate_range);
 
     double left_plate_index_total = std::accumulate(left_indexes.begin(), left_indexes.end(), 0);

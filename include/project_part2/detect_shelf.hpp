@@ -27,7 +27,7 @@ public:
   static constexpr double kPi = 3.141592653589793238463;
   static const std::string kScanTopic;
   static const std::string kOdomTopic;
-  static constexpr float kPlateIntensity = 8000;
+  static constexpr int kPlateIntensity = 8000;
   // Intense readings in order to be able to detect a plate
   static constexpr int kPlateDetectionFailureThreshold = 6;
   static const std::string kOdomFrame;
