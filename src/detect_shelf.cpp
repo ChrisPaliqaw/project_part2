@@ -5,15 +5,12 @@
 #include <chrono>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/transform_broadcaster.h>
-#include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/detail/vector3__struct.hpp"
 #include "../include/project_part2/detect_shelf.hpp"
 #include "rclcpp/logging.hpp"
 #include "rcutils/logging.h"
 #include "rosidl_runtime_cpp/traits.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
-#include "nav_msgs/msg/odometry.hpp"
-#include "geometry_msgs/msg/twist.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <tf2/exceptions.h>
@@ -71,46 +68,6 @@ user:~$ ros2 interface show geometry_msgs/msg/Vector3
 float64 x
 float64 y
 float64 z
-*/
-
-/*
-$ ros2 interface show nav_msgs/msg/Odometry
-# This represents an estimate of a position and velocity in free space.
-# The pose in this message should be specified in the coordinate frame given by header.frame_id
-# The twist in this message should be specified in the coordinate frame given by the child_frame_id
-
-# Includes the frame id of the pose parent.
-std_msgs/Header header
-
-# Frame id the pose points to. The twist is in this coordinate frame.
-string child_frame_id
-
-# Estimated pose that is typically relative to a fixed world frame.
-geometry_msgs/PoseWithCovariance pose
-
-# Estimated linear and angular velocity relative to child_frame_id.
-geometry_msgs/TwistWithCovariance twist
-*/
-
-/*
-$ ros2 interface show geometry_msgs/msg/PoseWithCovariance
-# This represents a pose in free space with uncertainty.
-
-Pose pose
-
-# Row-major representation of the 6x6 covariance matrix
-# The orientation parameters use a fixed-axis representation.
-# In order, the parameters are:
-# (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
-float64[36] covariance
-*/
-
-/*
-user:~/ros2_ws$ ros2 interface show geometry_msgs/msg/Pose
-# A representation of pose in free space, composed of position and orientation.
-
-Point position
-Quaternion orientation
 */
 
 /*
@@ -175,21 +132,12 @@ DetectShelf::DetectShelf():
 
     rclcpp::SubscriptionOptions laser_options;
     laser_options.callback_group = callback_group_;
-    // rclcpp::SubscriptionOptions odom_options;
-    // odom_options.callback_group = callback_group_;
 
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
         kScanTopic,
         10,
         std::bind(&DetectShelf::scanCallback, this, _1),
         laser_options);
-    /*
-    odom_subscription_ = create_subscription<nav_msgs::msg::Odometry>(
-        kOdomTopic,
-        10,
-        std::bind(&DetectShelf::odomCallback, this, _1),
-        odom_options);
-    */
 
     RCLCPP_INFO_STREAM(this->get_logger(), "Create DetectShelf");
 
@@ -260,28 +208,6 @@ double DetectShelf::magnitude(geometry_msgs::msg::Vector3 v3)
 
 void DetectShelf::timer_callback()
 {
-    /*
-    RCLCPP_INFO_STREAM(this->get_logger(),
-        "robot position: (" <<
-        this->base_link_trans_.x << ", " <<
-        this->base_link_trans_.y << ", " <<
-        this->base_link_trans_.z << ")"
-    );
-    RCLCPP_INFO_STREAM(this->get_logger(),
-        "robot orientation: (" <<
-        this->base_link_rot_.x << ", " <<
-        this->base_link_rot_.y << ", " <<
-        this->base_link_rot_.z << ")"
-    );
-    */
-    
-    /*
-    if (!is_base_link_trans_and_rot_) {
-        RCLCPP_INFO_STREAM(this->get_logger(), "No odom data yet recieved.");
-        return;
-    }
-    */
-
     // Cast from unsigned long
     int center_plate_index = int(DetectShelf::getAverageHighIntensityIndex(laser_scan_));
     if (center_plate_index == kIndexFailureValue) {
