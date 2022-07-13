@@ -169,25 +169,27 @@ DetectShelf::DetectShelf():
         rclcpp::CallbackGroupType::MutuallyExclusive);
 
     timer_ptr_ = this->create_wall_timer(
-        0.5s,
+        1s,
         std::bind(&DetectShelf::timer_callback, this),
         callback_group_);
 
     rclcpp::SubscriptionOptions laser_options;
     laser_options.callback_group = callback_group_;
-    rclcpp::SubscriptionOptions odom_options;
-    odom_options.callback_group = callback_group_;
+    // rclcpp::SubscriptionOptions odom_options;
+    // odom_options.callback_group = callback_group_;
 
     laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
         kScanTopic,
         10,
         std::bind(&DetectShelf::scanCallback, this, _1),
         laser_options);
+    /*
     odom_subscription_ = create_subscription<nav_msgs::msg::Odometry>(
         kOdomTopic,
         10,
         std::bind(&DetectShelf::odomCallback, this, _1),
         odom_options);
+    */
 
     RCLCPP_INFO_STREAM(this->get_logger(), "Create DetectShelf");
 
@@ -200,7 +202,7 @@ DetectShelf::DetectShelf():
 }
 
 // Note that the z is ignored
-std::pair<double, double> DetectShelf::yawAndDistanceToRosXY(const double yaw, double distance)
+std::pair<float, float> DetectShelf::yawAndDistanceToRosXY(const float yaw, float distance)
 {
     if (distance > DetectShelf::kRangeMax) {
         distance = DetectShelf::kRangeMax;
@@ -214,7 +216,7 @@ std::pair<double, double> DetectShelf::yawAndDistanceToRosXY(const double yaw, d
 }
 
 // https://stackoverflow.com/questions/1243614/how-do-i-calculate-the-normal-vector-of-a-line-segment#:~:text=The%20normal%20vector%20(x'%2C,or%20(dx%2Cdy)%20.&text=Show%20activity%20on%20this%20post.,-m1%20%3D%20(y2%20%2D&text=m2%20%3D%20%2D1%20%2F%20m1%20%2F%2F,offset%20of%20new%20perpendicular%20line..
-double DetectShelf::surfaceNormal(const double x1, const double y1, const double x2, const double y2)
+float DetectShelf::surfaceNormal(const double x1, const double y1, const double x2, const double y2)
 {
         return (x2 - x1) / (y2 - y1);
 }
@@ -258,6 +260,7 @@ double DetectShelf::magnitude(geometry_msgs::msg::Vector3 v3)
 
 void DetectShelf::timer_callback()
 {
+    /*
     RCLCPP_INFO_STREAM(this->get_logger(),
         "robot position: (" <<
         this->base_link_trans_.x << ", " <<
@@ -270,13 +273,17 @@ void DetectShelf::timer_callback()
         this->base_link_rot_.y << ", " <<
         this->base_link_rot_.z << ")"
     );
+    */
     
+    /*
     if (!is_base_link_trans_and_rot_) {
         RCLCPP_INFO_STREAM(this->get_logger(), "No odom data yet recieved.");
         return;
     }
+    */
 
-    unsigned long center_plate_index = DetectShelf::getAverageHighIntensityIndex(laser_scan_);
+    // Cast from unsigned long
+    int center_plate_index = int(DetectShelf::getAverageHighIntensityIndex(laser_scan_));
     if (center_plate_index == kIndexFailureValue) {
         return;
     }
@@ -287,16 +294,16 @@ void DetectShelf::timer_callback()
     std::vector<int> left_indexes, right_indexes;
     std::vector<float> left_ranges, right_ranges;
     for (unsigned long index = 0; index < laser_scan_->intensities.size(); ++index) {
-        int current_intensity = round(laser_scan_->intensities[index]);
+        int current_intensity = int(round(laser_scan_->intensities[index]));
         if (current_intensity > 0) {
             RCLCPP_DEBUG_STREAM(get_logger(), "current_intensity = " << current_intensity);
         }
         if (current_intensity == DetectShelf::kPlateIntensity) {
-            if (index < center_plate_index) {
-                left_indexes.push_back(index);
+            if (int(index) < center_plate_index) {
+                left_indexes.push_back(int(index));
                 left_ranges.push_back(laser_scan_->ranges[index]);
             } else {
-                right_indexes.push_back(index);
+                right_indexes.push_back(int(index));
                 right_ranges.push_back(laser_scan_->ranges[index]);
             }
         }
@@ -318,33 +325,34 @@ void DetectShelf::timer_callback()
 
     int left_plate_index_total = std::accumulate(left_indexes.begin(), left_indexes.end(), 0);
     RCLCPP_DEBUG_STREAM(get_logger(), "left_plate_index_total = " << left_plate_index_total);
-    int left_plate_index = left_plate_index_total / left_indexes.size();
+    int left_plate_index = left_plate_index_total / int(left_indexes.size());
     RCLCPP_DEBUG_STREAM(get_logger(), "left_plate_index = " << left_plate_index);
 
     int right_plate_index_total = std::accumulate(right_indexes.begin(), right_indexes.end(), 0);
     RCLCPP_DEBUG_STREAM(get_logger(), "right_plate_index_total = " << right_plate_index_total);
-    int right_plate_index = right_plate_index_total / right_indexes.size();
+    int right_plate_index = right_plate_index_total / int(right_indexes.size());
     RCLCPP_DEBUG_STREAM(get_logger(), "right_plate_index = " << right_plate_index);
 
     // center index is the straight ahead of the robot - it could actually be
     // calculated only once per instantiation of the node
     auto center_index = laser_scan_->intensities.size() / 2;
     RCLCPP_DEBUG_STREAM(get_logger(), "center_index = " << center_index);
-    auto left_plate_yaw = (left_plate_index - center_index) * laser_scan_->angle_increment;
+    RCLCPP_DEBUG_STREAM(get_logger(), "laser_scan_->angle_increment = " << laser_scan_->angle_increment);
+    float left_plate_yaw = (float(center_index) - float(left_plate_index)) * laser_scan_->angle_increment;
     RCLCPP_DEBUG_STREAM(get_logger(), "left_plate_yaw = " << left_plate_yaw);
-    auto right_plate_yaw = (right_plate_index - center_index) * laser_scan_->angle_increment;
+    float right_plate_yaw = (float(center_index) - float(right_plate_index)) * laser_scan_->angle_increment;
     RCLCPP_DEBUG_STREAM(get_logger(), "right_plate_yaw = " << right_plate_yaw);
 
-    auto left_tf = tfRelativeToRobot(left_plate_yaw, left_plate_range);
-    auto right_tf = tfRelativeToRobot(right_plate_yaw, right_plate_range);
+    std::pair<float, float> left_tf = yawAndDistanceToRosXY(left_plate_yaw, left_plate_range);
+    std::pair<float, float> right_tf = yawAndDistanceToRosXY(right_plate_yaw, right_plate_range);
 
     RCLCPP_INFO_STREAM(get_logger(), "left tf = " << left_tf.first << ", " << left_tf.second);
     RCLCPP_INFO_STREAM(get_logger(), "right tf = " << right_tf.first << ", " << right_tf.second);
 
-    auto slope_surface_normal = surfaceNormal(
+    float slope_surface_normal = surfaceNormal(
         left_tf.first, left_tf.second, right_tf.first, right_tf.second);
     RCLCPP_INFO_STREAM(get_logger(), "slope_surface_normal = " << slope_surface_normal);
-    auto radians_surface_normal = atan(slope_surface_normal);
+    float radians_surface_normal = atan(slope_surface_normal);
 
     tf2::Quaternion orientation_quaternion;
     orientation_quaternion.setRPY(0, 0, radians_surface_normal); 
@@ -357,7 +365,7 @@ void DetectShelf::timer_callback()
     geometry_msgs::msg::TransformStamped t;
 
     t.header.stamp = now;
-    t.header.frame_id = DetectShelf::kOdomFrame;
+    t.header.frame_id = DetectShelf::kRobotLaserBaseLink;
     t.child_frame_id = DetectShelf::kCartFrame;
     t.transform.translation.x = center_tf.first;
     t.transform.translation.y = center_tf.second;
@@ -370,6 +378,7 @@ void DetectShelf::timer_callback()
     tf_publisher_->sendTransform(t);
 }
 
+/*
 void DetectShelf::odomCallback(const nav_msgs::msg::Odometry::SharedPtr message)
 {
     this->base_link_trans_.x = message->pose.pose.position.x;
@@ -386,6 +395,7 @@ void DetectShelf::odomCallback(const nav_msgs::msg::Odometry::SharedPtr message)
 
     is_base_link_trans_and_rot_ = true;
 }
+*/
 
 void DetectShelf::scanCallback([[maybe_unused]] const sensor_msgs::msg::LaserScan::SharedPtr message)
 {
@@ -409,20 +419,22 @@ unsigned long DetectShelf::getAverageHighIntensityIndex(sensor_msgs::msg::LaserS
     }
 }
 
-std::pair<double, double> DetectShelf::tfRelativeToRobot(const double yaw, const double distance)
+/*
+std::pair<double, double> DetectShelf::tfRelativeToLaser(const double yaw, const double distance)
 {
-    double adjusted_yaw = yaw - base_link_rot_.z;
-    std::pair<double, double> return_value = yawAndDistanceToRosXY(adjusted_yaw, distance);
-    return_value.first += base_link_trans_.x;
-    return_value.second -= base_link_trans_.y;
+    // double adjusted_yaw = yaw - base_link_rot_.z;
+    std::pair<double, double> return_value = yawAndDistanceToRosXY(yaw, distance);
+    // return_value.first += base_link_trans_.x;
+    // return_value.second -= base_link_trans_.y;
     return return_value;
 }
+*/
 
 const std::string DetectShelf::kScanTopic = "scan";
-const std::string DetectShelf::kOdomTopic = "odom";
+// const std::string DetectShelf::kOdomTopic = "odom";
 const std::string DetectShelf::kCartFrame = "static_cart";
 const std::string DetectShelf::kRobotLaserBaseLink = "robot_front_laser_link";
-const std::string DetectShelf::kOdomFrame = "robot_odom";
+// const std::string DetectShelf::kOdomFrame = "robot_odom";
 
 } // namespace project_part2
 

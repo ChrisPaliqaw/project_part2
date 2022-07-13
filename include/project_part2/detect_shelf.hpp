@@ -36,8 +36,8 @@ public:
   static const std::string kRobotLaserBaseLink;
   static constexpr double kRangeMax = 20.0;
 
-  static std::pair<double, double> yawAndDistanceToRosXY(const double yaw, double distance);
-  static double surfaceNormal(const double x1, const double y1, const double x2, const double y2);
+  static std::pair<float, float> yawAndDistanceToRosXY(const float yaw, float distance);
+  static float surfaceNormal(const double x1, const double y1, const double x2, const double y2);
 
 private: 
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
@@ -51,19 +51,19 @@ private:
 
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_publisher_;
   void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr message);
-  void odomCallback(const nav_msgs::msg::Odometry::SharedPtr message);
+  // void odomCallback(const nav_msgs::msg::Odometry::SharedPtr message);
 
   std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
-  geometry_msgs::msg::Vector3 base_link_trans_;
-  geometry_msgs::msg::Vector3 base_link_rot_;
+  // geometry_msgs::msg::Vector3 base_link_trans_;
+  // geometry_msgs::msg::Vector3 base_link_rot_;
   sensor_msgs::msg::LaserScan::SharedPtr laser_scan_;
-  bool is_base_link_trans_and_rot_ = false; // has the odom callback been called yet?
+  // bool is_base_link_trans_and_rot_ = false; // has the odom callback been called yet?
 
-  std::pair<double, double> tfRelativeToRobot(const double yaw, const double distance);
+  // static std::pair<double, double> tfRelativeToLaser(const double yaw, const double distance);
   unsigned long getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan);
-  static constexpr unsigned long kIndexFailureValue = ULONG_MAX;
+  static constexpr int kIndexFailureValue = INT_MAX;
   
   static double magnitude(geometry_msgs::msg::Vector3 v3);
 };

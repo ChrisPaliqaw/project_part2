@@ -6,10 +6,9 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /TF1
+        - /TF1/Status1
         - /TF1/Tree1
-        - /TF1/Tree1/robot_odom1
-        - /TF1/Tree1/robot_odom1/robot_base_footprint1
-        - /TF1/Tree1/robot_odom1/robot_base_footprint1/robot_base_link1
       Splitter Ratio: 0.430402934551239
     Tree Height: 621
   - Class: rviz_common/Selection
@@ -120,12 +119,14 @@ Visualization Manager:
                 {}
             robot_top_cover_link:
               {}
+          static_cart:
+            {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: robot_base_link
+    Fixed Frame: robot_odom
     Frame Rate: 30
   Name: root
   Tools:
@@ -165,25 +166,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 20.635900497436523
+      Distance: 9.583395957946777
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.12249118089675903
-        Y: -0.24838592112064362
-        Z: 0.32668647170066833
+        X: 0.5277555584907532
+        Y: 0.3086063265800476
+        Z: -1.8645310401916504
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6803981065750122
+      Pitch: 0.3553980886936188
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.8103978633880615
+      Yaw: 0.3903980255126953
     Saved: ~
 Window Geometry:
   Displays:
