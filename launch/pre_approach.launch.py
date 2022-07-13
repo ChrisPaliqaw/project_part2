@@ -4,9 +4,9 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         Node(
-            package='turtlesim',
-            namespace='turtlesim1',
-            executable='turtlesim_node',
-            name='sim'
+            package='project_part2',
+            executable='pre_approach',
+            output='screen',
+            parameters=[ {"is_gazebo": True} ]
         ),
     ])

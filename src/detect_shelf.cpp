@@ -219,7 +219,6 @@ double DetectShelf::surfaceNormal(const double x1, const double y1, const double
         return (x2 - x1) / (y2 - y1);
 }
 
-
 // Code adapted from https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
 geometry_msgs::msg::Vector3 DetectShelf::eulerFromQuaternion(const tf2::Quaternion q)
 {
@@ -290,7 +289,7 @@ void DetectShelf::timer_callback()
     for (unsigned long index = 0; index < laser_scan_->intensities.size(); ++index) {
         int current_intensity = round(laser_scan_->intensities[index]);
         if (current_intensity > 0) {
-            RCLCPP_INFO_STREAM(get_logger(), "current_intensity = " << current_intensity);
+            RCLCPP_DEBUG_STREAM(get_logger(), "current_intensity = " << current_intensity);
         }
         if (current_intensity == DetectShelf::kPlateIntensity) {
             if (index < center_plate_index) {
@@ -317,15 +316,24 @@ void DetectShelf::timer_callback()
     RCLCPP_DEBUG_STREAM(
         get_logger(), "right_plate_range = " << right_plate_range);
 
-    double left_plate_index_total = std::accumulate(left_indexes.begin(), left_indexes.end(), 0);
-    double left_plate_index = left_plate_index_total / left_indexes.size();
+    int left_plate_index_total = std::accumulate(left_indexes.begin(), left_indexes.end(), 0);
+    RCLCPP_DEBUG_STREAM(get_logger(), "left_plate_index_total = " << left_plate_index_total);
+    int left_plate_index = left_plate_index_total / left_indexes.size();
+    RCLCPP_DEBUG_STREAM(get_logger(), "left_plate_index = " << left_plate_index);
 
-    double right_plate_index_total = std::accumulate(right_indexes.begin(), right_indexes.end(), 0);
-    double right_plate_index = right_plate_index_total / right_indexes.size();
+    int right_plate_index_total = std::accumulate(right_indexes.begin(), right_indexes.end(), 0);
+    RCLCPP_DEBUG_STREAM(get_logger(), "right_plate_index_total = " << right_plate_index_total);
+    int right_plate_index = right_plate_index_total / right_indexes.size();
+    RCLCPP_DEBUG_STREAM(get_logger(), "right_plate_index = " << right_plate_index);
 
+    // center index is the straight ahead of the robot - it could actually be
+    // calculated only once per instantiation of the node
     auto center_index = laser_scan_->intensities.size() / 2;
+    RCLCPP_DEBUG_STREAM(get_logger(), "center_index = " << center_index);
     auto left_plate_yaw = (left_plate_index - center_index) * laser_scan_->angle_increment;
+    RCLCPP_DEBUG_STREAM(get_logger(), "left_plate_yaw = " << left_plate_yaw);
     auto right_plate_yaw = (right_plate_index - center_index) * laser_scan_->angle_increment;
+    RCLCPP_DEBUG_STREAM(get_logger(), "right_plate_yaw = " << right_plate_yaw);
 
     auto left_tf = tfRelativeToRobot(left_plate_yaw, left_plate_range);
     auto right_tf = tfRelativeToRobot(right_plate_yaw, right_plate_range);
