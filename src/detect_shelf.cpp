@@ -260,13 +260,13 @@ double DetectShelf::magnitude(geometry_msgs::msg::Vector3 v3)
 void DetectShelf::timer_callback()
 {
     RCLCPP_INFO_STREAM(this->get_logger(),
-        "position: (" <<
+        "robot position: (" <<
         this->base_link_trans_.x << ", " <<
         this->base_link_trans_.y << ", " <<
         this->base_link_trans_.z << ")"
     );
     RCLCPP_INFO_STREAM(this->get_logger(),
-        "rotation: (" <<
+        "robot orientation: (" <<
         this->base_link_rot_.x << ", " <<
         this->base_link_rot_.y << ", " <<
         this->base_link_rot_.z << ")"
@@ -278,24 +278,35 @@ void DetectShelf::timer_callback()
     }
 
     unsigned long center_plate_index = DetectShelf::getAverageHighIntensityIndex(laser_scan_);
-    RCLCPP_INFO_STREAM(get_logger(), "center_plate_index = " << center_plate_index);
+    if (center_plate_index == kIndexFailureValue) {
+        return;
+    }
+    RCLCPP_INFO_STREAM(
+        get_logger(),
+        "center_plate_index = " << center_plate_index << " / " << laser_scan_->intensities.size());
     
     std::vector<int> left_indexes, right_indexes;
     std::vector<float> left_ranges, right_ranges;
     for (unsigned long index = 0; index < laser_scan_->intensities.size(); ++index) {
-        if (index < center_plate_index) {
-            left_indexes.push_back(index);
-            left_ranges.push_back(laser_scan_->ranges[index]);
-        } else {
-            right_indexes.push_back(index);
-            right_ranges.push_back(laser_scan_->ranges[index]);
+        if (laser_scan_->intensities[index] == DetectShelf::kPlateIntensity) {
+            if (index < center_plate_index) {
+                left_indexes.push_back(index);
+                left_ranges.push_back(laser_scan_->ranges[index]);
+            } else {
+                right_indexes.push_back(index);
+                right_ranges.push_back(laser_scan_->ranges[index]);
+            }
         }
     }
     double left_range_total = std::accumulate(left_ranges.begin(), left_ranges.end(), 0);
     double left_plate_range = left_range_total / left_ranges.size();
+    RCLCPP_INFO_STREAM(
+        get_logger(), "left_plate_range = " << left_plate_range);
 
     double right_range_total = std::accumulate(right_ranges.begin(), right_ranges.end(), 0);
     double right_plate_range = right_range_total / right_ranges.size();
+    RCLCPP_INFO_STREAM(
+        get_logger(), "right_plate_range = " << right_plate_range);
 
     double left_plate_index_total = std::accumulate(left_indexes.begin(), left_indexes.end(), 0);
     double left_plate_index = left_plate_index_total / left_indexes.size();
@@ -373,6 +384,7 @@ unsigned long DetectShelf::getAverageHighIntensityIndex(sensor_msgs::msg::LaserS
         }
     }
     if (high_intensity_indexes.size() < DetectShelf::kPlateDetectionFailureThreshold) {
+        RCLCPP_INFO(this->get_logger(), "Signal below threshold");
         return kIndexFailureValue;
     } else {
         long sum = std::accumulate(high_intensity_indexes.begin(), high_intensity_indexes.end(), 0);

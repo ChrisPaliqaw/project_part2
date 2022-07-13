@@ -4,6 +4,7 @@
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include <cmath>
+#include <climits>
 #include <iostream>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
@@ -61,8 +62,8 @@ private:
   bool is_base_link_trans_and_rot_ = false; // has the odom callback been called yet?
 
   std::pair<double, double> tfRelativeToRobot(const double yaw, const double distance);
-  static unsigned long getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan);
-  static constexpr double kIndexFailureValue = -1;
+  unsigned long getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan);
+  static constexpr unsigned long kIndexFailureValue = ULONG_MAX;
   
   static double magnitude(geometry_msgs::msg::Vector3 v3);
 };

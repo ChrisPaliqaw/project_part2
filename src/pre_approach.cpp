@@ -459,7 +459,7 @@ std::string PreApproach::state_string(PreApproachState state)
             string_value = "Stopping after turning toward the cart";
             break;
         case PreApproachState::stop:
-            string_value = "Inside the cart with the elevator raised";
+            string_value = "Facing the cart";
             break;
         default:
             string_value = "Error: unknown robot state";
