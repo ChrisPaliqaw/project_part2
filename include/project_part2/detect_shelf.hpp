@@ -24,7 +24,7 @@ public:
 
   static constexpr double kPi = 3.141592653589793238463;
   static const std::string kScanTopic;
-  static constexpr int kPlateIntensity = 8000;
+  static constexpr float kPlateIntensity = 5000.0;
   // Intense readings in order to be able to detect a plate
   static constexpr int kPlateDetectionFailureThreshold = 6;
   static constexpr double kHalfPlateGap = 0.3;
@@ -55,6 +55,7 @@ private:
   
   unsigned long getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan);
   static constexpr int kIndexFailureValue = INT_MAX;
+  static constexpr float kMaxDistanceBetweenShelfLegs = 0.5;
   
   static double magnitude(geometry_msgs::msg::Vector3 v3);
 };

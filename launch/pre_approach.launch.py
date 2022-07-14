@@ -7,6 +7,6 @@ def generate_launch_description():
             package='project_part2',
             executable='pre_approach',
             output='screen',
-            parameters=[ {"is_gazebo": True} ]
+            parameters=[ {"is_gazebo": False} ]
         ),
     ])

@@ -224,7 +224,7 @@ void DetectShelf::timer_callback()
         if (current_intensity > 0) {
             RCLCPP_DEBUG_STREAM(get_logger(), "current_intensity = " << current_intensity);
         }
-        if (current_intensity == DetectShelf::kPlateIntensity) {
+        if (current_intensity > DetectShelf::kPlateIntensity) {
             if (int(index) < center_plate_index) {
                 left_indexes.push_back(int(index));
                 left_ranges.push_back(laser_scan_->ranges[index]);
@@ -275,6 +275,15 @@ void DetectShelf::timer_callback()
     RCLCPP_INFO_STREAM(get_logger(), "left tf = " << left_tf.first << ", " << left_tf.second);
     RCLCPP_INFO_STREAM(get_logger(), "right tf = " << right_tf.first << ", " << right_tf.second);
 
+    float left_and_right_leg_distance =
+        sqrt(pow(left_tf.first - right_tf.first, 2.0) + pow(left_tf.second - right_tf.second, 2.0));
+    RCLCPP_INFO_STREAM(get_logger(), "distance between legs = " << left_and_right_leg_distance);
+    if (left_and_right_leg_distance < kMaxDistanceBetweenShelfLegs) {
+        RCLCPP_INFO_STREAM(get_logger(),
+            "Can only detect one leg");
+            return;
+    }
+
     float slope_surface_normal = surfaceNormal(
         left_tf.first, left_tf.second, right_tf.first, right_tf.second);
     RCLCPP_INFO_STREAM(get_logger(), "slope_surface_normal = " << slope_surface_normal);
@@ -304,25 +313,6 @@ void DetectShelf::timer_callback()
     tf_publisher_->sendTransform(t);
 }
 
-/*
-void DetectShelf::odomCallback(const nav_msgs::msg::Odometry::SharedPtr message)
-{
-    this->base_link_trans_.x = message->pose.pose.position.x;
-    this->base_link_trans_.y = message->pose.pose.position.y;
-    this->base_link_trans_.z = message->pose.pose.position.z;
-
-    tf2::Quaternion orientation_quaternion;
-    tf2::convert(message->pose.pose.orientation, orientation_quaternion);
-    // https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Quaternion-Fundamentals.html
-    auto orientation_euler = eulerFromQuaternion(orientation_quaternion);
-    this->base_link_rot_.x = orientation_euler.x;
-    this->base_link_rot_.y = orientation_euler.y;
-    this->base_link_rot_.z = orientation_euler.z;
-
-    is_base_link_trans_and_rot_ = true;
-}
-*/
-
 void DetectShelf::scanCallback([[maybe_unused]] const sensor_msgs::msg::LaserScan::SharedPtr message)
 {
     laser_scan_ = message;
@@ -332,7 +322,7 @@ unsigned long DetectShelf::getAverageHighIntensityIndex(sensor_msgs::msg::LaserS
 {
     std::vector<unsigned long> high_intensity_indexes;
     for (unsigned long i = 0; i < laser_scan->intensities.size(); ++i) {
-        if (laser_scan->intensities[i] == DetectShelf::kPlateIntensity) {
+        if (laser_scan->intensities[i] > DetectShelf::kPlateIntensity) {
             high_intensity_indexes.push_back(i);
         }
     }
@@ -345,22 +335,9 @@ unsigned long DetectShelf::getAverageHighIntensityIndex(sensor_msgs::msg::LaserS
     }
 }
 
-/*
-std::pair<double, double> DetectShelf::tfRelativeToLaser(const double yaw, const double distance)
-{
-    // double adjusted_yaw = yaw - base_link_rot_.z;
-    std::pair<double, double> return_value = yawAndDistanceToRosXY(yaw, distance);
-    // return_value.first += base_link_trans_.x;
-    // return_value.second -= base_link_trans_.y;
-    return return_value;
-}
-*/
-
 const std::string DetectShelf::kScanTopic = "scan";
-// const std::string DetectShelf::kOdomTopic = "odom";
 const std::string DetectShelf::kCartFrame = "static_cart";
 const std::string DetectShelf::kRobotLaserBaseLink = "robot_front_laser_link";
-// const std::string DetectShelf::kOdomFrame = "robot_odom";
 
 } // namespace project_part2
 
