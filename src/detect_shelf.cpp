@@ -259,6 +259,14 @@ void DetectShelf::timer_callback()
     int right_plate_index = right_plate_index_total / int(right_indexes.size());
     RCLCPP_DEBUG_STREAM(get_logger(), "right_plate_index = " << right_plate_index);
 
+    int left_and_right_index_distance = abs(float(left_plate_index) - float(right_plate_index));
+    RCLCPP_DEBUG_STREAM(get_logger(), "left_and_right_index_distance = " << left_and_right_index_distance);
+    if (left_and_right_index_distance < kMaxDistanceIndexDistanceBetweenLegs) {
+        RCLCPP_INFO_STREAM(get_logger(),
+            "Can only detect one leg");
+            return;
+    }
+
     // center index is the straight ahead of the robot - it could actually be
     // calculated only once per instantiation of the node
     auto center_index = laser_scan_->intensities.size() / 2;
@@ -278,11 +286,6 @@ void DetectShelf::timer_callback()
     float left_and_right_leg_distance =
         sqrt(pow(left_tf.first - right_tf.first, 2.0) + pow(left_tf.second - right_tf.second, 2.0));
     RCLCPP_INFO_STREAM(get_logger(), "distance between legs = " << left_and_right_leg_distance);
-    if (left_and_right_leg_distance < kMaxDistanceBetweenShelfLegs) {
-        RCLCPP_INFO_STREAM(get_logger(),
-            "Can only detect one leg");
-            return;
-    }
 
     float slope_surface_normal = surfaceNormal(
         left_tf.first, left_tf.second, right_tf.first, right_tf.second);

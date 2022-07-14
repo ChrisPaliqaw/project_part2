@@ -55,7 +55,7 @@ private:
   
   unsigned long getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan);
   static constexpr int kIndexFailureValue = INT_MAX;
-  static constexpr float kMaxDistanceBetweenShelfLegs = 0.5;
+  static constexpr int kMaxDistanceIndexDistanceBetweenLegs = 50;
   
   static double magnitude(geometry_msgs::msg::Vector3 v3);
 };
