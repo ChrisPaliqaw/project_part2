@@ -19,11 +19,9 @@ public:
   static constexpr int kFrontScanRange = 540;
   static constexpr double kCloseCartDistance = 0.33;
   static constexpr double kLinearVelocity = 0.08;
-  static constexpr double kGazeboLinearVelocity = 0.16;
   static constexpr double kLeftAngularVelocity = 0.2;
   static constexpr double kRightAngularVelocity = -kLeftAngularVelocity;
   static constexpr double kTurnFuzz = 0.1; // Precision of turn +-
-  static const std::string kIsGazeboParameter;
 
   static const std::string kScanTopic;
   static const std::string kCmdVelTopic;
@@ -38,10 +36,6 @@ public:
 
 private:
   
-  // Set inside the constructor and never changed, but can't
-  // be declared constant because we must get the parameter is_gazebo in order
-  // to set it correctly
-  double linear_velocity_;
   bool is_complete_ = false;
   EnterCartState state_;
   geometry_msgs::msg::Vector3
@@ -51,14 +45,17 @@ private:
 
   rclcpp::CallbackGroup::SharedPtr callback_group_;
 
-  rclcpp::TimerBase::SharedPtr timer_ptr_;
-  void timer_callback();
+  // Issue cmd_vel commands when this timer fires 
+  rclcpp::TimerBase::SharedPtr cmd_vel_timer_ptr_;
+  void cmd_vel_timer_callback();
+
+  // Get tf's when this timer fires
+  rclcpp::TimerBase::SharedPtr tf_timer_ptr_;
+  void tf_timer_callback();
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   
   void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message);
-
-  bool is_gazebo_;
 
   sensor_msgs::msg::LaserScan::SharedPtr scan_message_;
   std::shared_ptr<geometry_msgs::msg::Twist> twist_;

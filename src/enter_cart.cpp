@@ -90,17 +90,17 @@ EnterCart::EnterCart():
     Node("enter_cart"),
     state_(EnterCartState::initialize)
 {
-    this->declare_parameter<bool>(kIsGazeboParameter, false);
-    this->get_parameter(kIsGazeboParameter, is_gazebo_);
-    RCLCPP_INFO_STREAM(get_logger(), "is_gazebo = " << (is_gazebo_ ? "true" : "false"));
-    linear_velocity_ = (is_gazebo_ ? kGazeboLinearVelocity : kLinearVelocity);
 
     callback_group_ = this->create_callback_group(
         rclcpp::CallbackGroupType::Reentrant);
 
-    timer_ptr_ = this->create_wall_timer(
+    cmd_vel_timer_ptr_ = this->create_wall_timer(
         0.5s,
-        std::bind(&EnterCart::timer_callback, this),
+        std::bind(&EnterCart::cmd_vel_timer_callback, this),
+        callback_group_);
+    tf_timer_ptr_ = this->create_wall_timer(
+        1s,
+        std::bind(&EnterCart::tf_timer_callback, this),
         callback_group_);
 
     rclcpp::SubscriptionOptions laser_options;
@@ -133,7 +133,7 @@ double EnterCart::magnitude(geometry_msgs::msg::Vector3 v3)
     return sqrt(v3.x*v3.x + v3.y*v3.y + v3.z*v3.z);
 }
 
-void EnterCart::timer_callback()
+void EnterCart::cmd_vel_timer_callback()
 {
     if (is_complete_)
     {
@@ -141,6 +141,14 @@ void EnterCart::timer_callback()
     }
     
     publish_twist();
+}
+
+void EnterCart::tf_timer_callback()
+{
+    if (is_complete_)
+    {
+        return;
+    }
 }
 
 void EnterCart::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
@@ -171,7 +179,7 @@ void EnterCart::turn()
 void EnterCart::forward()
 {
     stop();
-    twist_->linear.x = linear_velocity_;
+    twist_->linear.x = kLinearVelocity;
 }
 
 void EnterCart::publish_twist()
@@ -225,13 +233,12 @@ std::string EnterCart::state_string(EnterCartState state)
     return string_value;
 }
 
-const std::string EnterCart::kIsGazeboParameter = "is_gazebo";
 const std::string EnterCart::kScanTopic = "scan";
 const std::string EnterCart::kCmdVelTopic = "cmd_vel";
 
 } // namespace project_part2
 
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[]) {
   rclcpp::init(argc, argv);
   
   std::shared_ptr<project_part2::EnterCart> pre_approach =
