@@ -5,6 +5,7 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='project_part2',
-            executable='detect_shelf',
+            executable='enter_cart',
             output='screen'
+        ),
     ])
