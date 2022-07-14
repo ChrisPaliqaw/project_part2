@@ -126,7 +126,7 @@ EnterCart::EnterCart():
     twist_ = std::make_shared<geometry_msgs::msg::Twist>();
 
     auto ret = rcutils_logging_set_logger_level(
-        get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+        get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
     if (ret != RCUTILS_RET_OK) {
         RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
         rcutils_reset_error();
@@ -140,11 +140,105 @@ double EnterCart::magnitude(geometry_msgs::msg::Vector3 v3)
     return sqrt(v3.x*v3.x + v3.y*v3.y + v3.z*v3.z);
 }
 
+// Code adapted from https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+geometry_msgs::msg::Vector3 EnterCart::euler_from_quaternion(tf2::Quaternion q)
+{
+    geometry_msgs::msg::Vector3 v3;
+
+    // roll (x-axis rotation)
+    double sinr_cosp = 2 * (q.w() * q.x() + q.y() * q.z());
+    double cosr_cosp = 1 - 2 * (q.x() * q.x() + q.y() * q.y());
+    double roll;
+    roll = std::atan2(sinr_cosp, cosr_cosp);
+
+    // pitch (y-axis rotation)
+    double sinp = 2 * (q.w() * q.y() - q.z() * q.x());
+    double pitch;
+    if (std::abs(sinp) >= 1)
+        pitch = std::copysign(M_PI / 2, sinp); // use 90 degrees if out of range
+    else
+        pitch = std::asin(sinp);
+
+    // yaw (z-axis rotation)
+    double siny_cosp = 2 * (q.w() * q.z() + q.x() * q.y());
+    double cosy_cosp = 1 - 2 * (q.y() * q.y() + q.z() * q.z());
+    double yaw;
+    yaw = std::atan2(siny_cosp, cosy_cosp);
+
+    v3.x = roll;
+    v3.y = pitch;
+    v3.z = yaw;
+
+    return v3;
+}
+
 void EnterCart::cmd_vel_timer_callback()
 {
     if (is_complete_)
     {
         return;
+    }
+
+    log_state_verbose();
+
+    if (state_ == EnterCartState::initialize) {
+        if (have_received_tf_) {
+            state_ = EnterCartState::align_with_cart_orientation;
+            log_state();
+        }
+        return;
+    }
+
+    tf2::Quaternion tf2_quat_from_msg;
+    tf2::fromMsg(transform_stamped_.transform.rotation, tf2_quat_from_msg);
+
+    geometry_msgs::msg::Vector3 cart_euler =
+        euler_from_quaternion(tf2_quat_from_msg);
+    RCLCPP_DEBUG_STREAM(get_logger(), "Cart rotation: (" <<
+        cart_euler.x << ", " <<
+        cart_euler.y << ", " <<
+        cart_euler.z << ")");
+    RCLCPP_DEBUG_STREAM(get_logger(), "Cart translation: (" <<
+        transform_stamped_.transform.translation.x << ", " <<
+        transform_stamped_.transform.translation.y << ", " <<
+        transform_stamped_.transform.translation.z << ")");
+
+    float y_translation = transform_stamped_.transform.translation.y;
+
+    switch (state_) {
+    case EnterCartState::align_with_cart_orientation:
+      if (abs(cart_euler.z) <= kTurnFuzz) {
+        stop();
+        state_ = EnterCartState::align_with_cart_y;
+        log_state();
+      } else {
+        turn();
+      }
+      break;
+    case EnterCartState::align_with_cart_y:
+      
+      if (abs(y_translation) <= kTranslateFuzz) {
+        stop();
+        state_ = EnterCartState::align_with_cart_y;
+        log_state();
+      } else {
+        strafe(y_translation > 0.0f);
+      }
+      break;
+    case EnterCartState::move_into_cart:
+      if (scan_message_->ranges[kFrontScanRange] < kCloseCartDistance) {
+        stop();
+        state_ = EnterCartState::ready_to_attach;
+        log_state();
+        is_complete_ = true;
+      } else {
+        forward();
+      }
+      break;
+    default:
+      RCLCPP_ERROR_STREAM(
+        get_logger(), "Unexpected state in cmd_vel_timer_callback(): " << state_string(state_));
+      break;
     }
     
     publish_twist();
@@ -154,6 +248,20 @@ void EnterCart::tf_timer_callback()
 {
     if (is_complete_)
     {
+        return;
+    }
+
+    // Look up for the transformation between target_frame and turtle2 frames
+    // and send velocity commands for turtle2 to reach target_frame
+    try {
+        transform_stamped_ = tf_buffer_->lookupTransform(
+          kChildTfFrame, kParentTfFrame,
+          tf2::TimePointZero);
+        have_received_tf_ = true;
+    } catch (tf2::TransformException & ex) {
+        RCLCPP_INFO_STREAM(
+          get_logger(),
+          "Could not transform " << kChildTfFrame << " from " << kParentTfFrame << ": " << ex.what());
         return;
     }
 }
@@ -171,6 +279,17 @@ void EnterCart::stop()
 {
     twist_->linear.x = 0;
     twist_->linear.y = 0;
+    twist_->linear.z = 0;
+    twist_->angular.x = 0;
+    twist_->angular.y = 0;
+    twist_->angular.z = 0;
+}
+
+void EnterCart::strafe(bool isLeft)
+{
+    float sign = isLeft ? 1.0 : -1.0;
+    twist_->linear.x = 0;
+    twist_->linear.y = sign * EnterCart::kLinearVelocity;
     twist_->linear.z = 0;
     twist_->angular.x = 0;
     twist_->angular.y = 0;
@@ -242,6 +361,8 @@ std::string EnterCart::state_string(EnterCartState state)
 
 const std::string EnterCart::kScanTopic = "scan";
 const std::string EnterCart::kCmdVelTopic = "cmd_vel";
+const std::string EnterCart::kParentTfFrame = "robot_front_laser_link";
+const std::string EnterCart::kChildTfFrame = "static_cart";
 
 } // namespace project_part2
 

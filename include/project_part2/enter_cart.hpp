@@ -19,14 +19,18 @@ public:
   explicit EnterCart();
 
   static constexpr int kFrontScanRange = 540;
-  static constexpr double kCloseCartDistance = 0.33;
-  static constexpr double kLinearVelocity = 0.08;
-  static constexpr double kLeftAngularVelocity = 0.2;
-  static constexpr double kRightAngularVelocity = -kLeftAngularVelocity;
-  static constexpr double kTurnFuzz = 0.1; // Precision of turn +-
+  static constexpr float kCloseCartDistance = 0.33;
+  static constexpr float kLinearVelocity = 0.08;
+  static constexpr float kLeftAngularVelocity = 0.1;
+  static constexpr float kRightAngularVelocity = -kLeftAngularVelocity;
+  static constexpr float kTurnFuzz = 0.1; // Precision of turn +-
+  static constexpr float kTranslateFuzz = 0.01;
 
   static const std::string kScanTopic;
   static const std::string kCmdVelTopic;
+
+  static const std::string kParentTfFrame;
+  static const std::string kChildTfFrame;
 
   enum class EnterCartState {
     initialize,
@@ -58,6 +62,9 @@ private:
   rclcpp::TimerBase::SharedPtr tf_timer_ptr_;
   void tf_timer_callback();
 
+  geometry_msgs::msg::TransformStamped transform_stamped_;
+  bool have_received_tf_ = false;
+
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   
   void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message);
@@ -67,13 +74,14 @@ private:
 
   void stop();
   void turn();
-  void strafe();
+  void strafe(bool isLeft);
   void forward();
   void publish_twist();
 
   static std::string state_string(EnterCartState state);
   static double magnitude(geometry_msgs::msg::Vector3 v3);
   static bool is_stopped(geometry_msgs::msg::Vector3 v3);
+  static geometry_msgs::msg::Vector3 euler_from_quaternion(tf2::Quaternion q);
   
   // Log state using DEBUG level
   void log_state_verbose() const;

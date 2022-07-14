@@ -9,8 +9,6 @@ Panels:
         - /TF1
         - /TF1/Frames1
         - /TF1/Tree1
-        - /TF1/Tree1/robot_odom1
-        - /TF1/Tree1/robot_odom1/robot_base_footprint1
       Splitter Ratio: 0.430402934551239
     Tree Height: 621
   - Class: rviz_common/Selection
@@ -58,16 +56,6 @@ Visualization Manager:
           Value: false
         robot_base_link:
           Value: true
-        robot_cart_laser:
-          Value: false
-        robot_cart_laser_noisy:
-          Value: false
-        robot_cart_laser_noisy_0:
-          Value: false
-        robot_elevator_base_link:
-          Value: false
-        robot_elevator_platform_link:
-          Value: false
         robot_front_cover_link:
           Value: false
         robot_front_laser_base_link:
@@ -100,6 +88,8 @@ Visualization Manager:
           Value: false
         robot_top_cover_link:
           Value: false
+        static_cart:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
@@ -109,15 +99,13 @@ Visualization Manager:
         robot_odom:
           robot_base_footprint:
             robot_base_link:
-              robot_elevator_base_link:
-                robot_elevator_platform_link:
-                  {}
               robot_front_cover_link:
                 robot_base_docking_contact_link:
                   {}
               robot_front_laser_base_link:
                 robot_front_laser_link:
-                  {}
+                  static_cart:
+                    {}
               robot_front_rgbd_camera_rgb_base_link:
                 robot_front_rgbd_camera_depth_frame:
                   robot_front_rgbd_camera_depth_optical_frame:
@@ -140,18 +128,12 @@ Visualization Manager:
                 {}
             robot_top_cover_link:
               {}
-          robot_cart_laser:
-            {}
-          robot_cart_laser_noisy:
-            {}
-          robot_cart_laser_noisy_0:
-            {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: robot_front_laser_base_link
+    Fixed Frame: robot_front_laser_link
     Frame Rate: 30
   Name: root
   Tools:

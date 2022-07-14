@@ -221,9 +221,11 @@ void DetectShelf::timer_callback()
     std::vector<float> left_ranges, right_ranges;
     for (unsigned long index = 0; index < laser_scan_->intensities.size(); ++index) {
         int current_intensity = int(round(laser_scan_->intensities[index]));
+        /*
         if (current_intensity > 0) {
             RCLCPP_DEBUG_STREAM(get_logger(), "current_intensity = " << current_intensity);
         }
+        */
         if (current_intensity > DetectShelf::kPlateIntensity) {
             if (int(index) < center_plate_index) {
                 left_indexes.push_back(int(index));

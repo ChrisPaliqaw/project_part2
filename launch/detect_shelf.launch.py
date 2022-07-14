@@ -6,5 +6,5 @@ def generate_launch_description():
         Node(
             package='project_part2',
             executable='detect_shelf',
-            output='screen'
+            output='screen')
     ])
