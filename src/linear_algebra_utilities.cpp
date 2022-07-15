@@ -67,7 +67,3 @@ double magnitude(geometry_msgs::msg::Vector3 v3)
 }
 
 } // namespace project_part2
-
-int main(/*int argc, char * argv[]*/)
-{
-}

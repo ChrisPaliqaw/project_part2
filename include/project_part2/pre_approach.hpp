@@ -21,7 +21,7 @@ public:
                           std::string cmd_vel_topic = "robot/cmd_vel",
                           std::string elevator_down_topic = "elevator_down",
                           std::string elevator_up_topic = "elevator_up");
-  static geometry_msgs::msg::Vector3 euler_from_quaternion(tf2::Quaternion q);
+  // static geometry_msgs::msg::Vector3 euler_from_quaternion(tf2::Quaternion q);
 
   static constexpr int kFrontScanRange = 540;
   static constexpr double kCloseWallDistance = 0.33;
@@ -77,7 +77,6 @@ private:
   void forward();
   void publish_twist();
   static std::string state_string(PreApproachState state);
-  static double magnitude(geometry_msgs::msg::Vector3 v3);
   static bool is_stopped(geometry_msgs::msg::Vector3 v3);
   // States in which the node is waiting for the robot to slow and stop
   bool is_buffer_stop_state() const;
