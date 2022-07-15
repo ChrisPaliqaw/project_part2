@@ -79,15 +79,12 @@ private:
   void publish_twist();
 
   static std::string state_string(EnterCartState state);
-  static double magnitude(geometry_msgs::msg::Vector3 v3);
   static bool is_stopped(geometry_msgs::msg::Vector3 v3);
-  static geometry_msgs::msg::Vector3 euler_from_quaternion(tf2::Quaternion q);
   
   // Log state using DEBUG level
   void log_state_verbose() const;
   // Log state using INFO level
   void log_state() const;
-  
   void log_velocity() const;
 };
 } // namespace project_part2

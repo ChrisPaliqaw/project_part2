@@ -49,8 +49,7 @@ include_directories(include)
 add_executable(${SUB_SCAN_PUB_CMD_NODE_NAME} src/${SUB_SCAN_PUB_CMD_NODE_NAME}.cpp)
 add_executable(${PRE_APPROACH_NODE_NAME} src/${PRE_APPROACH_NODE_NAME}.cpp src/${LINEAR_ALGEBRA_UTILITIES}.cpp)
 add_executable(${DETECT_SHELF_NODE_NAME} src/${DETECT_SHELF_NODE_NAME}.cpp)
-add_executable(${ENTER_CART_NODE_NAME} src/${ENTER_CART_NODE_NAME}.cpp)
-# add_executable(${LINEAR_ALGEBRA_UTILITIES} src/${LINEAR_ALGEBRA_UTILITIES}.cpp)
+add_executable(${ENTER_CART_NODE_NAME} src/${ENTER_CART_NODE_NAME}.cpp  src/${LINEAR_ALGEBRA_UTILITIES}.cpp)
 
 ament_target_dependencies(${SUB_SCAN_PUB_CMD_NODE_NAME}
   "rclcpp"
@@ -75,10 +74,6 @@ ament_target_dependencies(${ENTER_CART_NODE_NAME}
   "geometry_msgs"
   "nav_msgs"
   "tf2_ros")
-# ament_target_dependencies(${LINEAR_ALGEBRA_UTILITIES}
-#   "rclcpp"
-#   "geometry_msgs"
-#   "tf2_ros")
 
 install(TARGETS
    ${SUB_SCAN_PUB_CMD_NODE_NAME}
@@ -96,10 +91,6 @@ install(TARGETS
    ${ENTER_CART_NODE_NAME}
    DESTINATION lib/${PROJECT_NAME}
 )
-# install(TARGETS
-#    ${LINEAR_ALGEBRA_UTILITIES}
-#    DESTINATION lib/${PROJECT_NAME}
-# )
 
 # Install launch files.
 install(DIRECTORY
