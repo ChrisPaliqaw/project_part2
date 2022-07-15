@@ -20,8 +20,6 @@ class DetectShelf : public rclcpp::Node {
 public:
   explicit DetectShelf();
 
-  static geometry_msgs::msg::Vector3 eulerFromQuaternion(const tf2::Quaternion q);
-
   static constexpr double kPi = 3.141592653589793238463;
   static const std::string kScanTopic;
   static constexpr float kPlateIntensity = 4000.0;
@@ -56,8 +54,6 @@ private:
   unsigned long getAverageHighIntensityIndex(sensor_msgs::msg::LaserScan::SharedPtr laser_scan);
   static constexpr int kIndexFailureValue = INT_MAX;
   static constexpr int kMaxDistanceIndexDistanceBetweenLegs = 50;
-  
-  static double magnitude(geometry_msgs::msg::Vector3 v3);
 };
 } // namespace project_part2
 #endif // PROJECT_PART2_DETECT_SHELF_HPP_
