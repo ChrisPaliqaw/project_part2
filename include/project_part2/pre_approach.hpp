@@ -1,5 +1,5 @@
-#ifndef PRE_APPROACH_HPP_
-#define PRE_APPROACH_HPP_
+#ifndef PROJECT_PART2_PRE_APPROACH_HPP_
+#define PROJECT_PART2_PRE_APPROACH_HPP_
 
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/twist.hpp"
@@ -21,7 +21,6 @@ public:
                           std::string cmd_vel_topic = "robot/cmd_vel",
                           std::string elevator_down_topic = "elevator_down",
                           std::string elevator_up_topic = "elevator_up");
-  // static geometry_msgs::msg::Vector3 euler_from_quaternion(tf2::Quaternion q);
 
   static constexpr int kFrontScanRange = 540;
   static constexpr double kCloseWallDistance = 0.33;
@@ -91,4 +90,4 @@ private:
   void log_velocity() const;
 };
 } // namespace project_part2
-#endif // PRE_APPROACH_HPP_
+#endif // PROJECT_PART2_PRE_APPROACH_HPP_
