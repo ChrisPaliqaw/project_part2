@@ -3,7 +3,6 @@
 
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/twist.hpp"
-#include "sensor_msgs/msg/laser_scan.hpp"
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -18,13 +17,14 @@ class EnterCart : public rclcpp::Node {
 public:
   explicit EnterCart();
 
-  static constexpr int kFrontScanRange = 540;
-  static constexpr float kCloseCartDistance = 0.33;
-  static constexpr float kLinearVelocity = 0.08;
-  static constexpr float kLeftAngularVelocity = 0.1;
+  // static constexpr int kFrontScanRange = 540;
+  // static constexpr float kCloseCartDistance = 0.33f;
+  static constexpr float kLinearVelocity = 0.08f;
+  static constexpr float kLeftAngularVelocity = 0.1f;
   static constexpr float kRightAngularVelocity = -kLeftAngularVelocity;
-  static constexpr float kTurnFuzz = 0.1; // Precision of turn +-
-  static constexpr float kTranslateFuzz = 0.01;
+  static constexpr float kTurnFuzz = 0.2f; // Precision of turn +-
+  static constexpr float kTranslateFuzz = 0.05f;
+  static constexpr float kCartMinDepthX = 0.3f;
 
   static const float kPiOverTwo;
 
@@ -49,8 +49,6 @@ private:
   EnterCartState state_;
   geometry_msgs::msg::Vector3
       goal_turn_v3_; // Goal: odom pose z rotation when turning toward cart
-  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
-      laser_subscription_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
@@ -69,10 +67,7 @@ private:
   bool have_received_tf_ = false;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
-  
-  void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message);
 
-  sensor_msgs::msg::LaserScan::SharedPtr scan_message_;
   std::shared_ptr<geometry_msgs::msg::Twist> twist_;
 
   void stop();

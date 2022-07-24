@@ -10,7 +10,6 @@
 #include "rclcpp/logging.hpp"
 #include "rcutils/logging.h"
 #include "rosidl_runtime_cpp/traits.hpp"
-#include "sensor_msgs/msg/laser_scan.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2/exceptions.h>
@@ -19,41 +18,6 @@
 #include "geometry_msgs/msg/vector3.hpp"
 
 using namespace std::chrono_literals;
-
-/*
-ros2 interface show sensor_msgs/msg/LaserScan
-# Single scan from a planar laser range-finder
-#
-# If you have another ranging device with different behavior (e.g. a sonar
-# array), please find or create a different message, since applications
-# will make fairly laser-specific assumptions about this data
-
-std_msgs/Header header # timestamp in the header is the acquisition time of
-                             # the first ray in the scan.
-                             #
-                             # in frame frame_id, angles are measured around
-                             # the positive Z axis (counterclockwise, if Z is up)
-                             # with zero angle being forward along the x axis
-
-float32 angle_min            # start angle of the scan [rad]
-float32 angle_max            # end angle of the scan [rad]
-float32 angle_increment      # angular distance between measurements [rad]
-
-float32 time_increment       # time between measurements [seconds] - if your scanner
-                             # is moving, this will be used in interpolating position
-                             # of 3d points
-float32 scan_time            # time between scans [seconds]
-
-float32 range_min            # minimum range value [m]
-float32 range_max            # maximum range value [m]
-
-float32[] ranges             # range data [m]
-                             # (Note: values < range_min or > range_max should be discarded)
-float32[] intensities        # intensity data [device-specific units].  If your
-                             # device does not provide intensities, please leave
-                             # the array empty.
-user:~$
-*/
 
 /*
 user:~$ ros2 interface show geometry_msgs/msg/Twist
@@ -100,25 +64,16 @@ EnterCart::EnterCart():
       std::make_shared<tf2_ros::TransformListener>(* tf_buffer_);
 
     callback_group_ = this->create_callback_group(
-        rclcpp::CallbackGroupType::Reentrant);
+        rclcpp::CallbackGroupType::MutuallyExclusive);
 
     cmd_vel_timer_ptr_ = this->create_wall_timer(
         0.5s,
         std::bind(&EnterCart::cmd_vel_timer_callback, this),
         callback_group_);
     tf_timer_ptr_ = this->create_wall_timer(
-        1s,
+        0.5s,
         std::bind(&EnterCart::tf_timer_callback, this),
         callback_group_);
-
-    rclcpp::SubscriptionOptions laser_options;
-    laser_options.callback_group = callback_group_;
-
-    laser_subscription_ = create_subscription<sensor_msgs::msg::LaserScan>(
-        kScanTopic,
-        10,
-        std::bind(&EnterCart::scan_callback, this, _1),
-        laser_options);
 
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(kCmdVelTopic, 10);
 
@@ -168,11 +123,13 @@ void EnterCart::cmd_vel_timer_callback()
         transform_stamped_.transform.translation.z << ")");
 
     float y_translation = transform_stamped_.transform.translation.y;
+    float x_translation = transform_stamped_.transform.translation.x;
 
     // When moving in front of the cart, are we trying to point toward the starting wall or the
     // opposing wall?
-    const float multiplier =  (cart_euler.x > 0.0) ? -1.0f : 1.0f;
+    const float multiplier =  (y_translation > 0.0) ? -1.0f : 1.0f;
     const float goal_euler_z = kPiOverTwo * multiplier;
+    RCLCPP_DEBUG_STREAM(get_logger(), "goal_euler_z = " << goal_euler_z);
 
     switch (state_) {
     case EnterCartState::align_perpindicular_to_cart_orientation:
@@ -204,7 +161,7 @@ void EnterCart::cmd_vel_timer_callback()
       }
       break;
     case EnterCartState::move_into_cart:
-      if (scan_message_->ranges[kFrontScanRange] < kCloseCartDistance) {
+      if (x_translation >= 0) {
         stop();
         state_ = EnterCartState::ready_to_attach;
         log_state();
@@ -242,15 +199,6 @@ void EnterCart::tf_timer_callback()
           "Could not transform " << kChildTfFrame << " from " << kParentTfFrame << ": " << ex.what());
         return;
     }
-}
-
-void EnterCart::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr message)
-{
-    if (is_complete_)
-    {
-        return;
-    }
-    scan_message_ = message;
 }
 
 void EnterCart::stop()
