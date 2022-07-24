@@ -26,6 +26,8 @@ public:
   static constexpr float kTurnFuzz = 0.1; // Precision of turn +-
   static constexpr float kTranslateFuzz = 0.01;
 
+  static const float kPiOverTwo;
+
   static const std::string kScanTopic;
   static const std::string kCmdVelTopic;
 
@@ -34,8 +36,9 @@ public:
 
   enum class EnterCartState {
     initialize,
+    align_perpindicular_to_cart_orientation,
+    move_in_front_of_cart,    
     align_with_cart_orientation,
-    align_with_cart_y,
     move_into_cart,
     ready_to_attach
   };
@@ -74,7 +77,6 @@ private:
 
   void stop();
   void turn();
-  void strafe(bool isLeft);
   void forward();
   void publish_twist();
 

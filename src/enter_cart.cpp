@@ -147,7 +147,7 @@ void EnterCart::cmd_vel_timer_callback()
 
     if (state_ == EnterCartState::initialize) {
         if (have_received_tf_) {
-            state_ = EnterCartState::align_with_cart_orientation;
+            state_ = EnterCartState::align_perpindicular_to_cart_orientation;
             log_state();
         }
         return;
@@ -169,24 +169,38 @@ void EnterCart::cmd_vel_timer_callback()
 
     float y_translation = transform_stamped_.transform.translation.y;
 
+    // When moving in front of the cart, are we trying to point toward the starting wall or the
+    // opposing wall?
+    const float multiplier =  (cart_euler.x > 0.0) ? -1.0f : 1.0f;
+    const float goal_euler_z = kPiOverTwo * multiplier;
+
     switch (state_) {
-    case EnterCartState::align_with_cart_orientation:
-      if (abs(cart_euler.z) <= kTurnFuzz) {
+    case EnterCartState::align_perpindicular_to_cart_orientation:
+      if (abs(cart_euler.z - goal_euler_z) <= kTurnFuzz) {
         stop();
-        state_ = EnterCartState::align_with_cart_y;
+        state_ = EnterCartState::move_in_front_of_cart;
         log_state();
       } else {
         turn();
       }
       break;
-    case EnterCartState::align_with_cart_y:
-      
+    case EnterCartState::move_in_front_of_cart:
       if (abs(y_translation) <= kTranslateFuzz) {
         stop();
-        state_ = EnterCartState::align_with_cart_y;
+        state_ = EnterCartState::align_with_cart_orientation;
         log_state();
       } else {
-        strafe(y_translation > 0.0f);
+        forward();
+      }
+      break;
+    case EnterCartState::align_with_cart_orientation:
+        
+      if (abs(cart_euler.z) <= kTurnFuzz) {
+        stop();
+        state_ = EnterCartState::move_into_cart;
+        log_state();
+      } else {
+        turn();
       }
       break;
     case EnterCartState::move_into_cart:
@@ -249,17 +263,6 @@ void EnterCart::stop()
     twist_->angular.z = 0;
 }
 
-void EnterCart::strafe(bool isLeft)
-{
-    float sign = isLeft ? 1.0 : -1.0;
-    twist_->linear.x = 0;
-    twist_->linear.y = sign * EnterCart::kLinearVelocity;
-    twist_->linear.z = 0;
-    twist_->angular.x = 0;
-    twist_->angular.y = 0;
-    twist_->angular.z = 0;
-}
-
 void EnterCart::turn()
 {
     stop();
@@ -304,11 +307,14 @@ std::string EnterCart::state_string(EnterCartState state)
         case EnterCartState::initialize:
             string_value = "Initializing";
             break;
+        case EnterCartState::align_perpindicular_to_cart_orientation:
+            string_value = "Aligning perpindicular to the cart's orientation";
+            break;
+        case EnterCartState::move_in_front_of_cart:
+            string_value = "Moving in front of the cart";
+            break;
         case EnterCartState::align_with_cart_orientation:
             string_value = "Aligning with the cart's orientation";
-            break;
-        case EnterCartState::align_with_cart_y:
-            string_value = "Aligning with the cart's y value";
             break;
         case EnterCartState::move_into_cart:
             string_value = "Moving into the cart";
@@ -324,9 +330,10 @@ std::string EnterCart::state_string(EnterCartState state)
 }
 
 const std::string EnterCart::kScanTopic = "scan";
-const std::string EnterCart::kCmdVelTopic = "cmd_vel";
+const std::string EnterCart::kCmdVelTopic = "robot/cmd_vel";
 const std::string EnterCart::kParentTfFrame = "robot_front_laser_link";
 const std::string EnterCart::kChildTfFrame = "static_cart";
+const float EnterCart::kPiOverTwo = M_PI / 2.0f;
 
 } // namespace project_part2
 

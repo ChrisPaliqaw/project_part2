@@ -5,8 +5,8 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='project_part2',
-            executable='pre_approach',
+            executable='enter_cart',
             output='screen',
-            parameters=[ {"is_gazebo": True} ]
+            parameters=[ {"is_gazebo": False} ]
         ),
     ])
