@@ -8,6 +8,7 @@
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "nav_msgs/msg/odometry.hpp"
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
 
@@ -24,12 +25,13 @@ public:
   static constexpr float kRightAngularVelocity = -kLeftAngularVelocity;
   static constexpr float kTurnFuzz = 0.2f; // Precision of turn +-
   static constexpr float kTranslateFuzz = 0.05f;
-  static constexpr float kCartMinDepthX = 0.3f;
+  static constexpr float kCartMinDepthX = 0.4f;
 
   static const float kPiOverTwo;
 
   static const std::string kScanTopic;
   static const std::string kCmdVelTopic;
+  static const std::string kOdomTopic;
 
   static const std::string kParentTfFrame;
   static const std::string kChildTfFrame;
@@ -40,6 +42,7 @@ public:
     move_in_front_of_cart,    
     align_with_cart_orientation,
     move_into_cart,
+    move_to_cart_center,
     ready_to_attach
   };
 
@@ -58,12 +61,16 @@ private:
   // Issue cmd_vel commands when this timer fires 
   rclcpp::TimerBase::SharedPtr cmd_vel_timer_ptr_;
   void cmd_vel_timer_callback();
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
+  void odomCallback(const nav_msgs::msg::Odometry::SharedPtr message);
 
   // Get tf's when this timer fires
   rclcpp::TimerBase::SharedPtr tf_timer_ptr_;
   void tf_timer_callback();
 
   geometry_msgs::msg::TransformStamped transform_stamped_;
+  nav_msgs::msg::Odometry::SharedPtr odom_message_;
+  float goal_odom_y; // Used only when entering the cart
   bool have_received_tf_ = false;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;

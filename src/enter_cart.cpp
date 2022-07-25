@@ -5,6 +5,7 @@
 #include <chrono>
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/detail/vector3__struct.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "../include/project_part2/enter_cart.hpp"
 #include "../include/project_part2/linear_algebra_utilities.hpp"
 #include "rclcpp/logging.hpp"
@@ -64,7 +65,7 @@ EnterCart::EnterCart():
       std::make_shared<tf2_ros::TransformListener>(* tf_buffer_);
 
     callback_group_ = this->create_callback_group(
-        rclcpp::CallbackGroupType::MutuallyExclusive);
+        rclcpp::CallbackGroupType::Reentrant);
 
     cmd_vel_timer_ptr_ = this->create_wall_timer(
         0.5s,
@@ -74,6 +75,15 @@ EnterCart::EnterCart():
         0.5s,
         std::bind(&EnterCart::tf_timer_callback, this),
         callback_group_);
+
+    
+    rclcpp::SubscriptionOptions odom_options;
+    odom_options.callback_group = callback_group_;
+    odom_subscription_ = create_subscription<nav_msgs::msg::Odometry>(
+        kOdomTopic,
+        10,
+        std::bind(&EnterCart::odomCallback, this, _1),
+        odom_options);
 
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(kCmdVelTopic, 10);
 
@@ -125,6 +135,8 @@ void EnterCart::cmd_vel_timer_callback()
     float y_translation = transform_stamped_.transform.translation.y;
     float x_translation = transform_stamped_.transform.translation.x;
 
+    float y_odom = odom_message_->pose.pose.position.y;
+
     // When moving in front of the cart, are we trying to point toward the starting wall or the
     // opposing wall?
     const float multiplier =  (y_translation > 0.0) ? -1.0f : 1.0f;
@@ -163,6 +175,19 @@ void EnterCart::cmd_vel_timer_callback()
     case EnterCartState::move_into_cart:
       if (x_translation >= 0) {
         stop();
+        state_ = EnterCartState::move_to_cart_center;
+        goal_odom_y = y_odom - kCartMinDepthX;
+        RCLCPP_INFO_STREAM(get_logger(), "goal_odom_y = " << goal_odom_y);
+        log_state();
+      } else {
+        forward();
+      }
+      break;
+    case EnterCartState::move_to_cart_center:
+      RCLCPP_INFO_STREAM(get_logger(), "goal_odom_y = " << goal_odom_y);
+      RCLCPP_INFO_STREAM(get_logger(), "y_odom  = " << y_odom);
+      if (y_odom <= goal_odom_y) {
+        stop();
         state_ = EnterCartState::ready_to_attach;
         log_state();
         is_complete_ = true;
@@ -199,6 +224,11 @@ void EnterCart::tf_timer_callback()
           "Could not transform " << kChildTfFrame << " from " << kParentTfFrame << ": " << ex.what());
         return;
     }
+}
+
+void EnterCart::odomCallback(const nav_msgs::msg::Odometry::SharedPtr message)
+{
+    odom_message_ = message;
 }
 
 void EnterCart::stop()
@@ -267,6 +297,9 @@ std::string EnterCart::state_string(EnterCartState state)
         case EnterCartState::move_into_cart:
             string_value = "Moving into the cart";
             break;
+        case EnterCartState::move_to_cart_center:
+            string_value = "Moving into the center of the cart";
+            break;
         case EnterCartState::ready_to_attach:
             string_value = "Ready to attach to the cart";
             break;
@@ -281,6 +314,7 @@ const std::string EnterCart::kScanTopic = "scan";
 const std::string EnterCart::kCmdVelTopic = "robot/cmd_vel";
 const std::string EnterCart::kParentTfFrame = "robot_front_laser_link";
 const std::string EnterCart::kChildTfFrame = "static_cart";
+const std::string EnterCart::kOdomTopic = "odom";
 const float EnterCart::kPiOverTwo = M_PI / 2.0f;
 
 } // namespace project_part2
