@@ -7,6 +7,6 @@ Moves an RB1 robot into a cart using laser and odometry data. It demonstrates th
 
 Concepts:
 - Components (no main function)
-- Multithreaded programming using std::lock_guard, but I plan to implement the next step using a multi-threaded executor with a mutually exclusive callback group.
+- Multithreaded programming using multi-threaded executors and reentrant callback groups.
 - Subscription and publication of topics
 - A ROS2 parameter adapts the algorithm to either Gazebo or a real RB1 in the Construct's [RoBox](https://www.theconstructsim.com/robox/) lab.
