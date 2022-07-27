@@ -1,7 +1,7 @@
 # project_part2
 
 Moves an RB1 robot into a cart using laser and odometry data. It demonstrates the concepts of
-[The Construct](https://www.theconstructsim.com/)'s <ins>ROS2 Basics C++</ins> course. As of June 26, 2022, I'm still adding features.
+[The Construct](https://www.theconstructsim.com/)'s <ins>ROS2 Basics C++</ins> course. As of July 27, 2022, I'm still adding features.
 
 ![RB-1 Robot moving toward a cart](rb1_warehouse.png "RB-1 Robot moving toward a cart")
 
