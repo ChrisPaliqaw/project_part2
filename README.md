@@ -66,7 +66,7 @@ ros2 run project_part2 elevator_service
 
 ## Run the current version of the project
 
-1. `pre_approach` moves RB1 close enough to view the entrance to the cart
+1. `pre_approach` moves RB1 close enough to view the entrance to the cart. Make sure to set the `is_gazebo` parameter in the pre-approach launch file appropriately.
 ```
 ros2 launch project_part2 pre_approach.launch.py
 
