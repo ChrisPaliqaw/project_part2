@@ -6,7 +6,10 @@ Moves an RB1 robot into a cart using laser and odometry data. It demonstrates th
 ![RB-1 Robot moving toward a cart](rb1_warehouse.png "RB-1 Robot moving toward a cart")
 
 Concepts:
+- Multithreaded programming using multi-threaded executors and reentrant callback groups: avoid race conditions and increase performance.
+- Use the ROS1-ROS2 bridge to use the RB-1 Base, which has a ROS1-based stack.
 - Components (no main function)
-- Multithreaded programming using multi-threaded executors and reentrant callback groups.
 - Subscription and publication of topics
+- Publish and listen to tf data
+- Make decisions using odometry and laser data.
 - A ROS2 parameter adapts the algorithm to either Gazebo or a real RB1 in the Construct's [RoBox](https://www.theconstructsim.com/robox/) lab.
