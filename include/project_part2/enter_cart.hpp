@@ -18,13 +18,15 @@ class EnterCart : public rclcpp::Node {
 public:
   explicit EnterCart();
 
-  // static constexpr int kFrontScanRange = 540;
-  // static constexpr float kCloseCartDistance = 0.33f;
   static constexpr float kLinearVelocity = 0.08f;
   static constexpr float kLeftAngularVelocity = 0.1f;
   static constexpr float kRightAngularVelocity = -kLeftAngularVelocity;
   static constexpr float kTurnFuzz = 0.2f; // Precision of turn +-
   static constexpr float kTranslateFuzz = 0.05f;
+
+  // when tf x equals this, stop relying on the cart tf
+  static constexpr float kSwitchToOdomX = -0.4f;
+  // How deep inside cart?
   static constexpr float kCartMinDepthX = 0.4f;
 
   static const float kPiOverTwo;
@@ -38,9 +40,10 @@ public:
 
   enum class EnterCartState {
     initialize,
+    align_with_cart_orientation01,
     align_perpindicular_to_cart_orientation,
     move_in_front_of_cart,    
-    align_with_cart_orientation,
+    align_with_cart_orientation02,
     move_into_cart,
     move_to_cart_center,
     ready_to_attach
@@ -70,8 +73,14 @@ private:
 
   geometry_msgs::msg::TransformStamped transform_stamped_;
   nav_msgs::msg::Odometry::SharedPtr odom_message_;
-  float goal_odom_y; // Used only when entering the cart
+  float goal_odom_y_; // Used only when entering the cart
+  //float goal_euler_z_; // only used when aligning perpindicular to the cart
   bool have_received_tf_ = false;
+  bool have_received_odom_ = false;
+  // Do we need to move toward the back wall or the front wall in order to align with 
+  bool is_move_toward_back_wall_;
+  float goal_odom_x_to_align_with_cart_;
+  float goal_odom_y_to_enter_cart_;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
 
@@ -80,6 +89,7 @@ private:
   void stop();
   void turn();
   void forward();
+  void backward();
   void publish_twist();
 
   static std::string state_string(EnterCartState state);

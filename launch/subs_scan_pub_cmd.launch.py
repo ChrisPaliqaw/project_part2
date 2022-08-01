@@ -16,7 +16,7 @@ def generate_launch_description():
                     plugin='project_part2::SubsScanPubCmd',
                     name='subs_scan_pub_cmd_component',
                     parameters=[
-                        {"is_gazebo": True}
+                        {"is_gazebo": False}
                     ]
                 ),
             ],
