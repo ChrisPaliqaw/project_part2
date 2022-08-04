@@ -4,6 +4,7 @@ set(SUB_SCAN_PUB_CMD_NODE_NAME subs_scan_pub_cmd)
 set(PRE_APPROACH_NODE_NAME pre_approach)
 set(DETECT_SHELF_NODE_NAME detect_shelf)
 set(ENTER_CART_NODE_NAME enter_cart)
+set(ACTION_SERVER action_server)
 set(LINEAR_ALGEBRA_UTILITIES linear_algebra_utilities)
 
 # Default to C99
@@ -31,6 +32,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(phase2_custom_interfaces REQUIRED)
 
 if(BUILD_TESTING)
@@ -50,6 +52,7 @@ add_executable(${SUB_SCAN_PUB_CMD_NODE_NAME} src/${SUB_SCAN_PUB_CMD_NODE_NAME}.c
 add_executable(${PRE_APPROACH_NODE_NAME} src/${PRE_APPROACH_NODE_NAME}.cpp src/${LINEAR_ALGEBRA_UTILITIES}.cpp)
 add_executable(${DETECT_SHELF_NODE_NAME} src/${DETECT_SHELF_NODE_NAME}.cpp)
 add_executable(${ENTER_CART_NODE_NAME} src/${ENTER_CART_NODE_NAME}.cpp  src/${LINEAR_ALGEBRA_UTILITIES}.cpp)
+add_executable(${ACTION_SERVER} src/${ACTION_SERVER}.cpp)
 
 ament_target_dependencies(${SUB_SCAN_PUB_CMD_NODE_NAME}
   "rclcpp"
@@ -74,6 +77,11 @@ ament_target_dependencies(${ENTER_CART_NODE_NAME}
   "geometry_msgs"
   "nav_msgs"
   "tf2_ros")
+ament_target_dependencies(${ACTION_SERVER}
+  "rclcpp"
+  "rclcpp_action"
+  "geometry_msgs"
+  "phase2_custom_interfaces")
 
 install(TARGETS
    ${SUB_SCAN_PUB_CMD_NODE_NAME}
@@ -89,6 +97,10 @@ install(TARGETS
 )
 install(TARGETS
    ${ENTER_CART_NODE_NAME}
+   DESTINATION lib/${PROJECT_NAME}
+)
+install(TARGETS
+   ${ACTION_SERVER}
    DESTINATION lib/${PROJECT_NAME}
 )
 
