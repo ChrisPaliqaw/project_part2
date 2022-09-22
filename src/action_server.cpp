@@ -65,10 +65,12 @@ private:
     const auto goal = goal_handle->get_goal();
     auto feedback = std::make_shared<Loading::Feedback>();
     auto & message = feedback->status;
-    message = "Starting movement...";
+    message = "Starting load...";
     auto result = std::make_shared<Loading::Result>();
     auto move = geometry_msgs::msg::Twist();
     rclcpp::Rate loop_rate(1);
+
+    
 
     for (int i = 0; (i < 5) && rclcpp::ok(); ++i) {
       // Check if there is a cancel request
