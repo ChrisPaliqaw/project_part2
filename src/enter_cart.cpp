@@ -1,5 +1,3 @@
-#include "../include/project_part2/enter_cart.hpp"
-#include "../include/project_part2/linear_algebra_utilities.hpp"
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/detail/vector3__struct.hpp"
 #include "geometry_msgs/msg/twist.hpp"
@@ -18,6 +16,8 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+#include "../include/project_part2/enter_cart.hpp"
+#include "linear_algebra_tools/linear_algebra.hpp"
 
 using namespace std::chrono_literals;
 
@@ -129,7 +129,7 @@ void EnterCart::cmd_vel_timer_callback() {
   tf2::fromMsg(transform_stamped_.transform.rotation, tf2_quat_from_msg);
 
   geometry_msgs::msg::Vector3 cart_euler =
-      euler_from_quaternion(tf2_quat_from_msg);
+      linear_algebra_utilities::EulerFromQuaternion(tf2_quat_from_msg);
   RCLCPP_DEBUG_STREAM(get_logger(), "Cart rotation: (" << cart_euler.x << ", "
                                                        << cart_euler.y << ", "
                                                        << cart_euler.z << ")");

@@ -5,8 +5,6 @@
 #include <chrono>
 #include "geometry_msgs/msg/detail/twist__struct.hpp"
 #include "geometry_msgs/msg/detail/vector3__struct.hpp"
-#include "../include/project_part2/pre_approach.hpp"
-#include "../include/project_part2/linear_algebra_utilities.hpp"
 #include "rclcpp/logging.hpp"
 #include "rcutils/logging.h"
 #include "rosidl_runtime_cpp/traits.hpp"
@@ -14,7 +12,9 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include "geometry_msgs/msg/vector3.hpp"
+#include <geometry_msgs/msg/vector3.hpp>
+#include <linear_algebra_tools/linear_algebra.hpp>
+#include "../include/project_part2/pre_approach.hpp"
 
 using namespace std::chrono_literals;
 
@@ -237,7 +237,7 @@ bool PreApproach::is_scan_state () const
 
 bool PreApproach::is_stopped(geometry_msgs::msg::Vector3 v3)
 {
-    return abs(magnitude(v3)) <= kTurnFuzz;
+    return abs(linear_algebra_utilities::Magnitude(v3)) <= kTurnFuzz;
 }
 
 void PreApproach::timer_callback()
@@ -286,7 +286,7 @@ void PreApproach::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message
     // Convert geometry_msgs::msg::Quaternion to tf2::Quaternion
     tf2::convert(message->pose.pose.orientation, tf2_quaternion);
 
-    geometry_msgs::msg::Vector3 current_rotation_v3 = euler_from_quaternion(tf2_quaternion);
+    geometry_msgs::msg::Vector3 current_rotation_v3 = linear_algebra_utilities::EulerFromQuaternion(tf2_quaternion);
 
     // Only turning behavior is determined by odom
     if (!is_odom_state())
@@ -319,7 +319,7 @@ void PreApproach::odom_callback(const nav_msgs::msg::Odometry::SharedPtr message
         q_rot.setRPY(0.0, 0.0, PreApproach::kGoalAngularDisplacement);
         tf2::Quaternion goal_turn = q_rot * tf2_quaternion;
         goal_turn.normalize();
-        goal_turn_v3_ = euler_from_quaternion(goal_turn);
+        goal_turn_v3_ = linear_algebra_utilities::EulerFromQuaternion(goal_turn);
         state_ = PreApproachState::turn;
     }
     else if ((state_ == PreApproachState::turn) && (abs(current_rotation_v3.z - goal_turn_v3_.z) <= kTurnFuzz))
