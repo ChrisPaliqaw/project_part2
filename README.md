@@ -68,9 +68,19 @@ colcon build --symlink-install
 
 ## Run the OLD version of the project, which uses ROS2 components
 
-Checkout tag ´components´ of project_part2
+This version is only compatible with gazebo and not very robust to variations in the robot or cart starting locations. It moves the RB-1
+close to the cart.
 
-In project_part2/launch
+In the ´git´ window, checkout tag ´components´ of project_part2
+´´´
+git checkout
+´´´
+In your ´build´ window, rebuild and source
+´´´
+colcon build --symlink-install
+. install/setup.bash
+´´´
+Now launch
 
 ```
 ros2 launch project_part2 subs_scan_pub_cmd.launch.py
