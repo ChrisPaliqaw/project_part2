@@ -106,7 +106,7 @@ cd ros2_ws/
 . install/setup.bash
 ros2 launch project_part2 detect_shelf.launch.py
 ```
-If needed, get the tf of laser on the command line
+- If needed, get the tf of laser on the command line
 ```
 ros2 run tf2_ros tf2_echo robot_odom robot_front_laser_link
 ```
@@ -126,11 +126,11 @@ ros2 launch project_part2 enter_cart.launch.py
 ros2 run elevator elevator_service_server
 ```
 - In a separate window:
-Raise the elevator
+  - Raise the elevator
 ```
 ros2 service call /elevator phase2_custom_interfaces/srv/Elevator is_up:\ true\
 ```
-Lower the elevator
+  - Lower the elevator
 ```
 ros2 service call /elevator phase2_custom_interfaces/srv/Elevator is_up:\ false\
 ```
