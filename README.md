@@ -1,5 +1,10 @@
 # project_part2
 
+## Dependencies
+
+- [phase2_custom_interfaces](https://github.com/christophomos/phase2_custom_interfaces)
+- [linear_algebra_tools](https://github.com/christophomos/linear_algebra_tools)
+
 Moves an RB1 robot into a cart using laser and odometry data. It demonstrates the concepts of
 [The Construct](https://www.theconstructsim.com/)'s <ins>ROS2 Basics C++</ins> course. As of July 27, 2022, I'm still adding features.
 
