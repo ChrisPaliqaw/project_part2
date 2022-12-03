@@ -28,14 +28,14 @@ Currently, the project is in development, without a public [Rosject](https://www
 
 # Setup
 
-Clone this project as well as its above dependencies into your ros2_ws/src.
+- Clone this project as well as its above dependencies into your ros2_ws/src.
 
-If running in simulation, created a shell named `gz`
+- If running in simulation, created a shell named `gz`
 ```
 source ~/simulation_ws/devel/setup.bash
 roslaunch rb1_base_gazebo warehouse_rb1.launch
 ```
-In the the `bridge` shell
+- In the the `bridge` shell
 ```
 source ~/catkin_ws/devel/setup.bash
 roslaunch load_params load_params_base.launch
@@ -43,28 +43,29 @@ roslaunch load_params load_params_base.launch
 source /opt/ros/foxy/setup.bash
 ros2 run ros1_bridge parameter_bridge
 ```
-To verify the bridge is working, in your `teleop` window run
+- To verify the bridge is working, in your `teleop` window run
 ```
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap cmd_vel:=/robot/cmd_vel
 ```
 
-To diagnose `ros1 info`
+- To diagnose `ros1 info`
 ```
 source /opt/ros/noetic/setup.bash
 rosparam get /topics
 ```
-For `ros2 info`
+- For `ros2 info`
 ```
 ros2 topic list
 ```
 
-Now create a `build` shell. You must compile phase2_custom_interfaces before the rest of the packages
+- Create a `build` shell. You must compile phase2_custom_interfaces before the rest of the packages
 ```
 colcon build --packages-select phase2_custom_interfaces
 . install/setup.bash
 colcon build --symlink-install
 . install/setup.bash
 ```
+- If you need to kill Gazebo with CTRL-C, you will need to rerun the commands in the `bridge` shell before proceeding again.
 
 ## Run the OLD version of the project, which uses ROS2 components
 
