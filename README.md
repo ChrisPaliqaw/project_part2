@@ -126,11 +126,11 @@ ros2 launch project_part2 enter_cart.launch.py
 ros2 run elevator elevator_service_server
 ```
 - In a separate window:
-  - Raise the elevator
+1. Raise the elevator
 ```
 ros2 service call /elevator phase2_custom_interfaces/srv/Elevator is_up:\ true\
 ```
-  - Lower the elevator
+2. Lower the elevator
 ```
 ros2 service call /elevator phase2_custom_interfaces/srv/Elevator is_up:\ false\
 ```
