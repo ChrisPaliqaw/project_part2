@@ -2,6 +2,9 @@
 
 ## Dependencies
 
+Some of the needed URDF files aren't yet publicly available. The files are only available to me within my **Phase 2** workspace at The Construct, though
+I am working to change this.
+
 - [phase2_custom_interfaces](https://github.com/christophomos/phase2_custom_interfaces)
 - [linear_algebra_tools](https://github.com/christophomos/linear_algebra_tools)
 
