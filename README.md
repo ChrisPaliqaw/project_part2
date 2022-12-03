@@ -71,21 +71,21 @@ colcon build --symlink-install
 This version is only compatible with **gazebo** and not very robust to variations in the robot or cart starting locations. It moves the RB-1
 close to the cart.
 
-In the ´git´ window, checkout tag ´components´ of project_part2
-´´´
+In the `git` window, checkout tag `components` of `project_part2`
+```
 git checkout
-´´´
-In your ´build´ window, rebuild and source
-´´´
+```
+In your `build` window, rebuild and source
+```
 colcon build --symlink-install
 . install/setup.bash
-´´´
+```
 Now launch
 
 ```
 ros2 launch project_part2 subs_scan_pub_cmd.launch.py
 ```
-Run the elevator service, which wraps around the elevator_up and elevator_down topics
+Run the elevator service, which wraps around the `elevator_up` and `elevator_down` topics
 ```
 ros2 run project_part2 elevator_service
 ```
