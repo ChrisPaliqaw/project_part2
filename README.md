@@ -92,13 +92,15 @@ ros2 run project_part2 elevator_service
 
 ## Run the current version of the project
 
-1. `pre_approach` moves RB1 close enough to view the entrance to the cart. Make sure to set the `is_gazebo` parameter in the pre-approach launch file appropriately.
+- Make sure you're back to the ´main´ branch before proceeding.
+
+- `pre_approach` moves RB1 close enough to view the entrance to the cart. Make sure to set the `is_gazebo` parameter in the pre-approach launch file appropriately.
 ```
 ros2 launch project_part2 pre_approach.launch.py
 
 ```
 
-2. `detect_shelf` (use a separate shell) uses laser data to detect the legs of the cart and publishes the transform `static-cart`
+- `detect_shelf` (use a separate shell) uses laser data to detect the legs of the cart and publishes the transform `static-cart`
 ```
 cd ros2_ws/
 . install/setup.bash
@@ -108,22 +110,22 @@ If needed, get the tf of laser on the command line
 ```
 ros2 run tf2_ros tf2_echo robot_odom robot_front_laser_link
 ```
-3. Verify the static_cart tf using rviz2
+- Verify the static_cart tf using rviz2
 ```
 ros2 run rviz2 rviz2
 ```
-Now load the configuration: ros2_ws/src/project_part2/rviz/project_part2.rviz
+- Load the configuration: ros2_ws/src/project_part2/rviz/project_part2.rviz
 
-3. Enter the cart using odometry data and the `static_cart` transform (currently debugging)
+- Enter the cart using odometry data and the `static_cart` transform (currently debugging)
 ```
 ros2 launch project_part2 enter_cart.launch.py
 ```
 
-4. Activate the elevator
+- Activate the elevator
 ```
 ros2 run elevator elevator_service_server
 ```
-In a separate window:
+- In a separate window:
 Raise the elevator
 ```
 ros2 service call /elevator phase2_custom_interfaces/srv/Elevator is_up:\ true\
