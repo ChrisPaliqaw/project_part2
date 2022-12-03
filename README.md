@@ -28,7 +28,7 @@ Currently, the project is in development, without a public [Rosject](https://www
 
 # Setup
 
-Clone this project as well as the [elevator](https://github.com/christophomos/elevator) and [phase2_custom_interfaces](https://github.com/christophomos/phase2_custom_interfaces) projects into your ros2_ws/src
+Clone this project as well as its above dependencies into your ros2_ws/src.
 
 If running in simulation, created a shell named `gz`
 ```
