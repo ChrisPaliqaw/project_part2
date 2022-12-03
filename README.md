@@ -67,6 +67,9 @@ colcon build --symlink-install
 ```
 
 ## Run the OLD version of the project, which uses ROS2 components
+
+In project_part2/launch/
+
 ```
 ros2 launch project_part2 subs_scan_pub_cmd.launch.py
 ```
